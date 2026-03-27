@@ -4,7 +4,7 @@ const Database = require('better-sqlite3')
 const path = require('path')
 
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 const DB_PATH = path.join(__dirname, 'sme.db')
 
 app.use(cors())
@@ -686,6 +686,13 @@ app.post('/api/auth/login', (req, res) => {
 
 // ─── Health check ──────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }))
+
+// ─── Serve frontend static files (production) ─────────────────────────────
+const distPath = path.join(__dirname, '../dist')
+app.use(express.static(distPath))
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'))
+})
 
 app.listen(PORT, () => {
   console.log(`\n  ✅ SME API Server running at http://localhost:${PORT}`)
