@@ -4,7 +4,7 @@ const Database = require('better-sqlite3')
 const path = require('path')
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 8080
 const DB_PATH = path.join(__dirname, 'sme.db')
 
 app.use(cors())
@@ -694,7 +694,6 @@ app.use((_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'))
 })
 
-app.listen(PORT, () => {
-  console.log(`\n  ✅ SME API Server running at http://localhost:${PORT}`)
-  console.log(`  📦 Database: ${DB_PATH}\n`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ SME API Server running at http://0.0.0.0:${PORT}`)
 })
