@@ -697,3 +697,5 @@ app.use((_req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SME API Server running at http://0.0.0.0:${PORT}`)
 })
+
+setInterval(() => {}, 1000)
