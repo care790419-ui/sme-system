@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "node server/index.js",
-    "start": "concurrently --names \"API,UI\" --prefix-colors \"cyan,blue\" \"npm run dev:server\" \"npm run dev\"",
-    "start:prod": "node server/index.js",
+    "dev:all": "concurrently --names \"API,UI\" --prefix-colors \"cyan,blue\" \"npm run dev:server\" \"npm run dev\"",
+    "start": "node server/index.js",
     "build": "tsc && vite build",
-    "build:prod": "cd server && npm install && cd .. && tsc && vite build",
+    "postinstall": "cd server && npm install",
     "preview": "vite preview"
   },
   "dependencies": {
