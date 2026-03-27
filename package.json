@@ -4,13 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:server": "node server/index.js",
-    "dev:all": "concurrently --names \"API,UI\" --prefix-colors \"cyan,blue\" \"npm run dev:server\" \"npm run dev\"",
     "start": "node server/index.js",
     "build": "tsc && vite build",
-    "postinstall": "cd server && npm install",
-    "preview": "vite preview"
+    "postinstall": "cd server && npm install"
   },
   "dependencies": {
     "date-fns": "^2.30.0",
