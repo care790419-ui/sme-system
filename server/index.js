@@ -5,7 +5,7 @@ const path = require('path')
 
 const app = express()
 const PORT = process.env.PORT || 8080
-const DB_PATH = path.join(__dirname, 'sme.db')
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'sme.db')
 
 app.use(cors())
 app.use(express.json({ limit: '10mb' }))
@@ -152,6 +152,7 @@ db.prepare("INSERT OR IGNORE INTO settings VALUES('password','admin')").run()
 try { db.exec("ALTER TABLE invoices ADD COLUMN taxRate REAL NOT NULL DEFAULT 0.05") } catch (_) {}
 try { db.exec("ALTER TABLE cost_items ADD COLUMN costType TEXT NOT NULL DEFAULT 'fixed'") } catch (_) {}
 try { db.exec("ALTER TABLE invoices ADD COLUMN taxMonth TEXT NOT NULL DEFAULT ''") } catch (_) {}
+try { db.exec("ALTER TABLE invoices ADD COLUMN invoiceNumber TEXT NOT NULL DEFAULT ''") } catch (_) {}
 // Backfill taxMonth from date column where empty
 db.prepare("UPDATE invoices SET taxMonth = substr(date,1,7) WHERE taxMonth = '' OR taxMonth IS NULL").run()
 
@@ -409,8 +410,9 @@ app.post('/api/invoices', (req, res) => {
   const { items = [], ...inv } = req.body
   if (inv.taxRate === undefined) inv.taxRate = 0.05
   if (!inv.taxMonth) inv.taxMonth = inv.date ? inv.date.substring(0, 7) : ''
+  if (inv.invoiceNumber === undefined) inv.invoiceNumber = ''
   try {
-    db.prepare('INSERT OR REPLACE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth)').run(inv)
+    db.prepare('INSERT OR REPLACE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth,invoiceNumber) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth,@invoiceNumber)').run(inv)
     db.prepare('DELETE FROM invoice_items WHERE invoice_id=?').run(inv.id)
     const stmt = db.prepare('INSERT INTO invoice_items(invoice_id,description,quantity,unitPrice,total) VALUES (?,?,?,?,?)')
     items.forEach(item => stmt.run(inv.id, item.description, item.quantity, item.unitPrice, item.total))
@@ -422,8 +424,9 @@ app.put('/api/invoices/:id', (req, res) => {
   const { items = [], ...inv } = { ...req.body, id: req.params.id }
   if (inv.taxRate === undefined) inv.taxRate = 0.05
   if (!inv.taxMonth) inv.taxMonth = inv.date ? inv.date.substring(0, 7) : ''
+  if (inv.invoiceNumber === undefined) inv.invoiceNumber = ''
   try {
-    db.prepare('INSERT OR REPLACE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth)').run(inv)
+    db.prepare('INSERT OR REPLACE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth,invoiceNumber) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth,@invoiceNumber)').run(inv)
     db.prepare('DELETE FROM invoice_items WHERE invoice_id=?').run(inv.id)
     const stmt = db.prepare('INSERT INTO invoice_items(invoice_id,description,quantity,unitPrice,total) VALUES (?,?,?,?,?)')
     items.forEach(item => stmt.run(inv.id, item.description, item.quantity, item.unitPrice, item.total))
@@ -438,12 +441,13 @@ app.delete('/api/invoices/:id', (req, res) => {
 
 app.post('/api/invoices/bulk', (req, res) => {
   const invoices = req.body
-  const stmtInv  = db.prepare('INSERT OR IGNORE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth)')
+  const stmtInv  = db.prepare('INSERT OR IGNORE INTO invoices(id,client,date,dueDate,amount,status,taxRate,taxMonth,invoiceNumber) VALUES (@id,@client,@date,@dueDate,@amount,@status,@taxRate,@taxMonth,@invoiceNumber)')
   const stmtItem = db.prepare('INSERT INTO invoice_items(invoice_id,description,quantity,unitPrice,total) VALUES (?,?,?,?,?)')
   const insertAll = db.transaction(rows => {
     rows.forEach(({ items = [], ...inv }) => {
       if (inv.taxRate === undefined) inv.taxRate = 0.05
       if (!inv.taxMonth) inv.taxMonth = inv.date ? inv.date.substring(0, 7) : ''
+      if (inv.invoiceNumber === undefined) inv.invoiceNumber = ''
       stmtInv.run(inv)
       items.forEach(item => stmtItem.run(inv.id, item.description, item.quantity, item.unitPrice, item.total))
     })

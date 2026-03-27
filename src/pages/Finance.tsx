@@ -308,6 +308,7 @@ const Finance: React.FC = () => {
     const today = todayCST()
     createInvoice({
       id: `INV-${Date.now()}`,
+      invoiceNumber: '',
       client: '新客戶',
       date: today,
       dueDate: addDaysCST(today, 30),
@@ -805,7 +806,8 @@ const Finance: React.FC = () => {
                         <input type="checkbox" checked={allInvSelected} onChange={toggleAllInv}
                           className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 cursor-pointer" />
                       </th>
-                      <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500">發票編號</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500">系統編號</th>
+                      <th className="text-left py-3 px-3 text-xs font-semibold text-blue-600">發票號碼</th>
                       <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500">客戶名稱</th>
                       <th className="text-left py-3 px-3 text-xs font-semibold text-gray-500">開立日期</th>
                       <th className="text-left py-3 px-3 text-xs font-semibold text-orange-600">報稅月份</th>
@@ -832,6 +834,18 @@ const Finance: React.FC = () => {
                                   className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 cursor-pointer" />
                               </td>
                               <td className="py-2 px-3 text-xs text-gray-400 font-mono">{inv.id}</td>
+                              <td className="py-2 px-3 min-w-28">
+                                <EditableCell
+                                  value={inv.invoiceNumber || ''}
+                                  onSave={v => updateInv(inv, 'invoiceNumber', v)}
+                                  className="font-medium text-blue-700"
+                                  displayValue={
+                                    inv.invoiceNumber
+                                      ? <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">{inv.invoiceNumber}</span>
+                                      : <span className="text-xs text-gray-300 italic">點擊輸入</span>
+                                  }
+                                />
+                              </td>
                               <td className="py-2 px-3 min-w-36">
                                 <EditableCell value={inv.client} onSave={v => updateInv(inv, 'client', v)} className="font-medium text-gray-700" />
                               </td>

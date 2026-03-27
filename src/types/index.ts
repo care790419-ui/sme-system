@@ -10,6 +10,7 @@ export interface Transaction {
 
 export interface Invoice {
   id: string
+  invoiceNumber: string  // 使用者自訂發票號碼
   client: string
   date: string
   dueDate: string
