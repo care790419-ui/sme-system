@@ -1,8 +1,8 @@
-import React from 'react'
-import { NavLink } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, DollarSign, BarChart3, Megaphone,
-  TrendingUp, Settings, Building2, Upload, ChevronRight,
+  TrendingUp, Settings, Building2, Upload, ChevronRight, X,
 } from 'lucide-react'
 
 interface NavItem {
@@ -52,76 +52,111 @@ const navGroups: NavGroup[] = [
   },
 ]
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const location = useLocation()
+
+  // 手機導航後自動關閉 sidebar
+  useEffect(() => {
+    onClose()
+  }, [location.pathname])
+
   return (
-    <aside className="w-60 min-h-screen flex flex-col" style={{ backgroundColor: '#1e3a8a' }}>
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-blue-800">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building2 size={18} className="text-white" />
+    <>
+      {/* 手機遮罩 */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-300
+          md:static md:w-60 md:translate-x-0 md:z-auto
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        style={{ backgroundColor: '#1e3a8a' }}
+      >
+        {/* Logo + 手機關閉按鈕 */}
+        <div className="px-5 py-5 border-b border-blue-800 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 bg-blue-400 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Building2 size={18} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-white font-bold text-sm leading-tight truncate">SME 管理系統</h1>
+              <p className="text-blue-300 text-xs">企業營運平台</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-white font-bold text-sm leading-tight truncate">SME 管理系統</h1>
-            <p className="text-blue-300 text-xs">企業營運平台</p>
+          <button
+            onClick={onClose}
+            className="md:hidden text-blue-300 hover:text-white p-1 flex-shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Nav groups */}
+        <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <p className="text-blue-400 text-[10px] font-semibold uppercase tracking-widest px-2 mb-1">
+                {group.label}
+              </p>
+              <ul className="space-y-0.5">
+                {group.items.map(item => (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      end={item.path === '/'}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 group ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <item.icon size={16} className={isActive ? 'text-white' : 'text-blue-400 group-hover:text-white'} />
+                          <span className="flex-1 text-[13px]">{item.label}</span>
+                          {isActive && <ChevronRight size={12} className="text-blue-300" />}
+                          {item.badge && (
+                            <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                              {item.badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-blue-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">管</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-white text-xs font-medium truncate">系統管理員</p>
+              <p className="text-blue-400 text-[10px] truncate">admin@sme.com.tw</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Nav groups */}
-      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
-        {navGroups.map(group => (
-          <div key={group.label}>
-            <p className="text-blue-400 text-[10px] font-semibold uppercase tracking-widest px-2 mb-1">
-              {group.label}
-            </p>
-            <ul className="space-y-0.5">
-              {group.items.map(item => (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    end={item.path === '/'}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 group ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-blue-200 hover:bg-blue-800 hover:text-white'
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <item.icon size={16} className={isActive ? 'text-white' : 'text-blue-400 group-hover:text-white'} />
-                        <span className="flex-1 text-[13px]">{item.label}</span>
-                        {isActive && <ChevronRight size={12} className="text-blue-300" />}
-                        {item.badge && (
-                          <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-blue-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold">管</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-white text-xs font-medium truncate">系統管理員</p>
-            <p className="text-blue-400 text-[10px] truncate">admin@sme.com.tw</p>
-          </div>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 

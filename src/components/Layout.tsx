@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
-import { Bell, Search, RefreshCw, LogOut } from 'lucide-react'
+import { Bell, Search, RefreshCw, LogOut, Menu } from 'lucide-react'
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/':          { title: '總覽首頁',     subtitle: '企業整體營運概況' },
@@ -16,6 +16,8 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
 const Layout: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const pageInfo = pageTitles[location.pathname] ?? { title: location.pathname.replace('/', ''), subtitle: '' }
 
   const now = new Date()
@@ -34,21 +36,30 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">{pageInfo.title}</h2>
-            <p className="text-sm text-gray-500">{pageInfo.subtitle}</p>
+        <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger — 手機才顯示 */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-base md:text-xl font-bold text-gray-800 truncate">{pageInfo.title}</h2>
+              <p className="text-xs text-gray-500 hidden sm:block">{pageInfo.subtitle}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 hidden md:block">{today}</span>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-sm text-gray-500 hidden lg:block">{today}</span>
+            <button className="w-8 h-8 hidden sm:flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
               <Search size={16} />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+            <button className="w-8 h-8 hidden sm:flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
               <RefreshCw size={16} />
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors relative">
@@ -69,12 +80,12 @@ const Layout: React.FC = () => {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           <Outlet />
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 px-6 py-3 text-center">
+        <footer className="bg-white border-t border-gray-200 px-4 md:px-6 py-3 text-center">
           <p className="text-xs text-gray-400">
             © {currentYear} SME 企業管理系統 | 版本 1.1.0 | 資料更新時間：{now.toLocaleTimeString('zh-TW')}
           </p>

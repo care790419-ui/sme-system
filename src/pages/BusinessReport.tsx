@@ -239,7 +239,7 @@ const BusinessReport: React.FC = () => {
       </div>
 
       {/* ── 頂部 KPI 卡片 ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiCard title="本月營收" value={fmtNT(report?.revenue ?? 0)} sub={`${month.replace('-','年')}月`} />
         <KpiCard title="本月總成本" value={fmtNT(report?.totalCost ?? 0)} sub={`變動+固定`} positive={false} />
         <KpiCard title="毛利" value={fmtNT(report?.grossProfit ?? 0)} sub={`毛利率 ${fmtPct(report?.grossMargin ?? 0)}`} positive={(report?.grossProfit ?? 0) >= 0} />
@@ -297,7 +297,7 @@ const BusinessReport: React.FC = () => {
               <Bar dataKey="毛利"    fill="#10b981" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="bg-indigo-50 rounded-lg p-3">
               <p className="text-xs text-indigo-500 font-medium">固定成本</p>
               <p className="text-base font-bold text-indigo-700">{fmtNT(report?.fixCost ?? 0)}</p>
@@ -615,8 +615,8 @@ function CostRecordModal({ rec, cats, vendors, onSave, onClose }:
 
   return (
     <Modal title={rec.id.startsWith('REC-') && !rec.description ? '新增成本記錄' : '編輯成本記錄'} onClose={onClose}>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="col-span-2 block">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="sm:col-span-2 block">
           <span className="text-xs text-gray-500 mb-1 block">描述 *</span>
           <input value={form.description} onChange={e => set('description', e.target.value)} className={INPUT} placeholder="成本描述…" />
         </label>
@@ -696,8 +696,8 @@ function ProdModal({ prod, onSave, onClose }:
 
   return (
     <Modal title="商品毛利" onClose={onClose}>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="col-span-2 block"><span className="text-xs text-gray-500 mb-1 block">商品名稱 *</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="sm:col-span-2 block"><span className="text-xs text-gray-500 mb-1 block">商品名稱 *</span>
           <input value={form.productName} onChange={e => set('productName', e.target.value)} className={INPUT} /></label>
         <label className="block"><span className="text-xs text-gray-500 mb-1 block">通路</span>
           <input value={form.channel} onChange={e => set('channel', e.target.value)} className={INPUT} /></label>
@@ -733,7 +733,7 @@ function ChanModal({ chan, onSave, onClose }:
 
   return (
     <Modal title="通路毛利" onClose={onClose}>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block"><span className="text-xs text-gray-500 mb-1 block">通路名稱 *</span>
           <input value={form.name} onChange={e => set('name', e.target.value)} className={INPUT} /></label>
         <label className="block"><span className="text-xs text-gray-500 mb-1 block">平台</span>

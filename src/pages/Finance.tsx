@@ -448,7 +448,7 @@ const Finance: React.FC = () => {
               </div>
 
               {/* 4 KPI cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                   <p className="text-xs text-blue-500 font-medium mb-1">總營收</p>
                   <p className="text-2xl font-bold text-blue-800">{formatNT(Math.round(revenue))}</p>
@@ -743,7 +743,7 @@ const Finance: React.FC = () => {
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
                 {[
                   { label: '已付款', list: paidInv,    icon: CheckCircle,   color: 'text-emerald-600', bg: 'bg-emerald-50' },
                   { label: '待付款', list: unpaidInv,  icon: Clock,          color: 'text-yellow-600',  bg: 'bg-yellow-50'  },
@@ -893,7 +893,7 @@ const Finance: React.FC = () => {
           {/* ── 現金流量 ── */}
           {tab === 'cashflow' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                   { label: '營業現金流入（收入）',  amount: totalIncome,              pos: true  },
                   { label: '營業現金流出（支出）',  amount: -totalExpense,            pos: false },

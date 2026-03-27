@@ -146,23 +146,23 @@ const Settings: React.FC = () => {
       <div className="bg-white rounded-xl border border-red-100 p-5 shadow-sm">
         <h3 className="text-sm font-bold text-red-700 mb-4">危險操作</h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 border-b border-gray-50">
             <div>
               <p className="text-sm font-medium text-gray-700">重新載入示範資料</p>
               <p className="text-xs text-gray-400 mt-0.5">清除現有資料並重新填入示範資料（不可復原）</p>
             </div>
             <button onClick={() => setConfirm('reset')}
-              className="flex items-center gap-2 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-50 transition-colors">
+              className="flex items-center gap-2 px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-50 transition-colors self-start sm:self-auto">
               <RefreshCw size={13} />重置示範資料
             </button>
           </div>
-          <div className="flex items-center justify-between py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3">
             <div>
               <p className="text-sm font-medium text-gray-700">清除所有資料</p>
               <p className="text-xs text-gray-400 mt-0.5">刪除全部交易、發票、成本、廣告資料（不可復原）</p>
             </div>
             <button onClick={() => setConfirm('clear')}
-              className="flex items-center gap-2 px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors">
+              className="flex items-center gap-2 px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors self-start sm:self-auto">
               <Trash2 size={13} />清除所有資料
             </button>
           </div>

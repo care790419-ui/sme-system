@@ -175,7 +175,7 @@ const Marketing: React.FC = () => {
       </div>
 
       {/* Secondary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: '總點擊數',     value: fmtNum(totalClicks),               icon: MousePointer, color: 'text-blue-600',    bg: 'bg-blue-50'    },
           { label: '平均點擊成本', value: `NT$ ${avgCPC}`,                   icon: DollarSign,   color: 'text-green-600',   bg: 'bg-green-50'   },
@@ -386,7 +386,7 @@ const Marketing: React.FC = () => {
                       </div>
 
                       {/* Metrics */}
-                      <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                         {[
                           { label: '曝光', key: 'impressions' as keyof Campaign, display: fmtNum(cam.impressions) },
                           { label: '點擊', key: 'clicks' as keyof Campaign, display: fmtNum(cam.clicks) },
@@ -427,7 +427,7 @@ const Marketing: React.FC = () => {
           {/* ── ROI 分析 ── */}
           {tab === 'roi' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {platformData.map((p, i) => (
                   <div key={i} className="bg-gray-50 rounded-lg p-4">
                     <div className="text-sm font-bold mb-1" style={{ color: p.color }}>{p.platform}</div>
