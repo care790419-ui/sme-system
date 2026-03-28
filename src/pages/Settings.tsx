@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Building2, AlertTriangle, RefreshCw, Trash2, CheckCircle2, Lock } from 'lucide-react'
+import { Building2, AlertTriangle, RefreshCw, Trash2, CheckCircle2, Lock, Link2, Unlink, ChevronDown } from 'lucide-react'
+import { metaApi } from '../lib/metaApi'
+import type { MetaAdAccount, MetaStatus } from '../types'
 
 const Settings: React.FC = () => {
   const [companyName, setCompanyName]   = useState('')
@@ -12,11 +14,60 @@ const Settings: React.FC = () => {
   const [pwdSaved, setPwdSaved]         = useState(false)
   const [pwdError, setPwdError]         = useState('')
 
+  // ── Meta API state ──
+  const [metaStatus, setMetaStatus]         = useState<MetaStatus>({ connected: false })
+  const [metaToken, setMetaToken]           = useState('')
+  const [metaConnecting, setMetaConnecting] = useState(false)
+  const [metaError, setMetaError]           = useState('')
+  const [adAccounts, setAdAccounts]         = useState<MetaAdAccount[]>([])
+  const [loadingAccounts, setLoadingAccounts] = useState(false)
+
+  const loadMetaStatus = async () => {
+    const s = await metaApi.status()
+    setMetaStatus(s)
+    if (s.connected) loadAdAccounts()
+  }
+
+  const loadAdAccounts = async () => {
+    setLoadingAccounts(true)
+    try {
+      const list = await metaApi.adAccounts()
+      setAdAccounts(list)
+    } catch { /* ignore */ }
+    setLoadingAccounts(false)
+  }
+
+  const connectMeta = async () => {
+    if (!metaToken.trim()) return
+    setMetaConnecting(true)
+    setMetaError('')
+    try {
+      const r = await metaApi.connect(metaToken.trim())
+      if (r.ok) { setMetaToken(''); await loadMetaStatus() }
+    } catch (e: unknown) {
+      setMetaError(e instanceof Error ? e.message : '連線失敗')
+    }
+    setMetaConnecting(false)
+  }
+
+  const disconnectMeta = async () => {
+    await metaApi.disconnect()
+    setMetaStatus({ connected: false })
+    setAdAccounts([])
+  }
+
+  const selectAdAccount = async (acc: MetaAdAccount) => {
+    await metaApi.setAdAccount(acc.id, acc.name)
+    setMetaStatus(s => ({ ...s, adAccountId: acc.id, adAccountName: acc.name }))
+  }
+
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(s => {
       setCompanyName(s.company_name ?? '我的公司')
       setDemoMode(s.demo_mode === 'true')
     })
+    loadMetaStatus()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const save = async () => {
@@ -140,6 +191,94 @@ const Settings: React.FC = () => {
           {saved ? '已儲存' : '儲存設定'}
         </button>
         {saved && <p className="text-xs text-emerald-600 font-medium">設定已套用</p>}
+      </div>
+
+      {/* Meta API */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Link2 size={16} className="text-blue-500" />
+          <h3 className="text-sm font-bold text-gray-800">Meta 廣告帳號串接</h3>
+        </div>
+        <p className="text-xs text-gray-400 mb-4">串接後可從廣告文案頁直接發布草稿廣告到 Meta Ads Manager</p>
+
+        {metaStatus.connected ? (
+          <div className="space-y-4">
+            {/* Connected status */}
+            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />已連結：{metaStatus.userName}
+                </p>
+                {metaStatus.connectedAt && (
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    {new Date(metaStatus.connectedAt).toLocaleString('zh-TW')} 連線
+                  </p>
+                )}
+              </div>
+              <button onClick={disconnectMeta}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors">
+                <Unlink size={12} />斷開連結
+              </button>
+            </div>
+
+            {/* Ad account selector */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 mb-2">廣告帳號</p>
+              {loadingAccounts ? (
+                <p className="text-xs text-gray-400">載入中…</p>
+              ) : adAccounts.length === 0 ? (
+                <p className="text-xs text-amber-600">找不到廣告帳號，請確認此 Token 有廣告管理員權限</p>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={metaStatus.adAccountId ?? ''}
+                    onChange={e => {
+                      const acc = adAccounts.find(a => a.id === e.target.value)
+                      if (acc) selectAdAccount(acc)
+                    }}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-300 appearance-none"
+                  >
+                    <option value="">— 請選擇廣告帳號 —</option>
+                    {adAccounts.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}（{a.id}）</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              )}
+              {metaStatus.adAccountId && (
+                <p className="text-xs text-blue-600 mt-1.5">已選：{metaStatus.adAccountName}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-xs text-blue-700 space-y-1">
+              <p className="font-semibold">如何取得 Access Token？</p>
+              <p>前往 <span className="font-mono bg-blue-100 px-1 rounded">developers.facebook.com/tools/explorer</span></p>
+              <p>選擇您的 App → 勾選 <span className="font-mono bg-blue-100 px-1 rounded">ads_management</span>、<span className="font-mono bg-blue-100 px-1 rounded">pages_read_engagement</span> → 產生 Token</p>
+            </div>
+            <label className="block">
+              <span className="text-xs text-gray-500 mb-1 block">Access Token</span>
+              <input
+                value={metaToken}
+                onChange={e => setMetaToken(e.target.value)}
+                type="password"
+                placeholder="貼上 Meta User Access Token…"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 font-mono"
+              />
+            </label>
+            {metaError && <p className="text-xs text-red-600">{metaError}</p>}
+            <button
+              onClick={connectMeta}
+              disabled={!metaToken.trim() || metaConnecting}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              <Link2 size={14} />
+              {metaConnecting ? '驗證中…' : '連結 Meta 帳號'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Danger zone */}

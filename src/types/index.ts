@@ -128,6 +128,43 @@ export interface AdCopy {
   createdAt: string
 }
 
+// ── Meta API ──────────────────────────────────────────────────────────────────
+
+export interface MetaAdAccount {
+  id: string
+  name: string
+  currency: string
+  account_status: number   // 1=active
+}
+
+export interface MetaCampaign {
+  id: string
+  name: string
+  status: string
+  objective: string
+}
+
+export interface MetaAdSet {
+  id: string
+  name: string
+  status: string
+}
+
+export interface MetaPage {
+  id: string
+  name: string
+  access_token: string
+}
+
+export interface MetaStatus {
+  connected: boolean
+  userName?: string
+  userId?: string
+  adAccountId?: string
+  adAccountName?: string
+  connectedAt?: string
+}
+
 export interface SalesChannel {
   id: string
   name: string

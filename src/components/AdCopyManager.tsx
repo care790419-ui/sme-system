@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   Wand2, Save, Trash2, Copy, ChevronDown, ChevronRight,
-  CheckCircle, Clock, Play, Archive, Edit2,
+  CheckCircle, Clock, Play, Archive, Edit2, Send, X, AlertCircle,
 } from 'lucide-react'
-import { AdCopy, AdCopyTone, AdCopyStatus } from '../types'
+import { AdCopy, AdCopyTone, AdCopyStatus, MetaCampaign, MetaAdSet, MetaPage, MetaStatus } from '../types'
 import { useApp } from '../context/AppContext'
+import { metaApi } from '../lib/metaApi'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -172,6 +173,183 @@ function StatusBadge({ status, onChange }: { status: AdCopyStatus; onChange?: (s
   )
 }
 
+// ── Meta Publish Modal ────────────────────────────────────────────────────────
+
+interface MetaPublishModalProps {
+  copy: AdCopy
+  metaStatus: MetaStatus
+  onClose: () => void
+  onPublished: (updated: AdCopy) => void
+}
+
+function MetaPublishModal({ copy, metaStatus, onClose, onPublished }: MetaPublishModalProps) {
+  const [campaigns, setCampaigns]   = useState<MetaCampaign[]>([])
+  const [adsets, setAdsets]         = useState<MetaAdSet[]>([])
+  const [pages, setPages]           = useState<MetaPage[]>([])
+  const [campaignId, setCampaignId] = useState('')
+  const [adsetId, setAdsetId]       = useState('')
+  const [pageId, setPageId]         = useState('')
+  const [pageToken, setPageToken]   = useState('')
+  const [destUrl, setDestUrl]       = useState('')
+  const [loading, setLoading]       = useState(true)
+  const [publishing, setPublishing] = useState(false)
+  const [error, setError]           = useState('')
+
+  useEffect(() => {
+    Promise.all([metaApi.campaigns(), metaApi.pages()])
+      .then(([cams, pgs]) => { setCampaigns(cams); setPages(pgs) })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const onCampaignChange = async (id: string) => {
+    setCampaignId(id)
+    setAdsetId('')
+    setAdsets([])
+    if (!id) return
+    try {
+      const list = await metaApi.adsets(id)
+      setAdsets(list)
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : '載入廣告組失敗') }
+  }
+
+  const onPageChange = (id: string) => {
+    setPageId(id)
+    const pg = pages.find(p => p.id === id)
+    setPageToken(pg?.access_token ?? '')
+  }
+
+  const handlePublish = async () => {
+    if (!adsetId || !pageId || !destUrl.trim()) return
+    setPublishing(true)
+    setError('')
+    try {
+      const r = await metaApi.publish({
+        adCopyId: copy.id, adSetId: adsetId,
+        pageId, pageAccessToken: pageToken,
+        destinationUrl: destUrl.trim(),
+      })
+      if (r.ok) {
+        onPublished({ ...copy, status: 'running' })
+        onClose()
+      }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : '發布失敗') }
+    setPublishing(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+          <div>
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <Send size={15} className="text-blue-600" />發布到 Meta Ads
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">建立 PAUSED 草稿廣告，可在 Ads Manager 啟動</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Ad copy preview */}
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+            <p className="text-xs text-gray-400 font-medium">文案預覽</p>
+            <p className="text-sm font-bold text-gray-800">{copy.headline}</p>
+            <p className="text-xs text-gray-500 line-clamp-2">{copy.primaryText}</p>
+            <div className="flex gap-3 mt-1 text-[10px] text-gray-400">
+              <span>{copy.platform}</span><span>·</span><span>{copy.format}</span>
+            </div>
+          </div>
+
+          {/* Ad account info */}
+          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            <p className="text-xs text-blue-700">
+              廣告帳號：<span className="font-semibold">{metaStatus.adAccountName}</span>
+              <span className="text-blue-400 ml-1">（{metaStatus.adAccountId}）</span>
+            </p>
+          </div>
+
+          {loading ? (
+            <p className="text-xs text-gray-400 text-center py-4">載入活動清單中…</p>
+          ) : (
+            <>
+              {/* Campaign */}
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 block mb-1">廣告活動 *</span>
+                <select value={campaignId} onChange={e => onCampaignChange(e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  <option value="">— 選擇廣告活動 —</option>
+                  {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}（{c.status}）</option>)}
+                </select>
+                {campaigns.length === 0 && !loading && (
+                  <p className="text-xs text-amber-600 mt-1">找不到廣告活動，請先在 Ads Manager 建立活動</p>
+                )}
+              </label>
+
+              {/* Ad Set */}
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 block mb-1">廣告組 *</span>
+                <select value={adsetId} onChange={e => setAdsetId(e.target.value)}
+                  disabled={!campaignId}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50">
+                  <option value="">— 選擇廣告組 —</option>
+                  {adsets.map(a => <option key={a.id} value={a.id}>{a.name}（{a.status}）</option>)}
+                </select>
+              </label>
+
+              {/* Page */}
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 block mb-1">Facebook 粉絲專頁 *</span>
+                <select value={pageId} onChange={e => onPageChange(e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  <option value="">— 選擇粉絲專頁 —</option>
+                  {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {pages.length === 0 && !loading && (
+                  <p className="text-xs text-amber-600 mt-1">找不到粉絲專頁，請確認 Token 有 pages_read_engagement 權限</p>
+                )}
+              </label>
+
+              {/* Destination URL */}
+              <label className="block">
+                <span className="text-xs font-medium text-gray-500 block mb-1">目標網址 *</span>
+                <input value={destUrl} onChange={e => setDestUrl(e.target.value)}
+                  placeholder="https://your-store.com/product"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </label>
+            </>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-red-700">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+              取消
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={!adsetId || !pageId || !destUrl.trim() || publishing}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              <Send size={13} />
+              {publishing ? '發布中…' : '發布草稿廣告'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface CopyCardProps {
   copy: AdCopy
   mode: 'preview' | 'saved'
@@ -179,9 +357,11 @@ interface CopyCardProps {
   onUpdate?: (c: AdCopy) => void
   onDelete?: (id: string) => void
   onDuplicate?: (c: AdCopy) => void
+  onPublish?: (c: AdCopy) => void
+  metaConnected?: boolean
 }
 
-function CopyCard({ copy, mode, onSave, onUpdate, onDelete, onDuplicate }: CopyCardProps) {
+function CopyCard({ copy, mode, onSave, onUpdate, onDelete, onDuplicate, onPublish, metaConnected }: CopyCardProps) {
   const [expanded, setExpanded] = useState(mode === 'preview')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(copy)
@@ -231,6 +411,14 @@ function CopyCard({ copy, mode, onSave, onUpdate, onDelete, onDuplicate }: CopyC
           )}
           {mode === 'saved' && (
             <>
+              {metaConnected && (form.status === 'approved' || form.status === 'running') && (
+                <button
+                  onClick={e => { e.stopPropagation(); onPublish?.(copy) }}
+                  title="發布到 Meta"
+                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  <Send size={13} />
+                </button>
+              )}
               <button onClick={e => { e.stopPropagation(); setEditing(v => !v) }}
                 className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                 <Edit2 size={13} />
@@ -355,6 +543,14 @@ const AdCopyManager: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<AdCopyStatus | 'all'>('all')
   const [filterPlatform, setFilterPlatform] = useState('all')
 
+  // Meta integration
+  const [metaStatus, setMetaStatus]           = useState<MetaStatus>({ connected: false })
+  const [publishTarget, setPublishTarget]     = useState<AdCopy | null>(null)
+
+  useEffect(() => {
+    metaApi.status().then(setMetaStatus).catch(() => {})
+  }, [])
+
   const toggleTone = (tone: AdCopyTone) => {
     setSelectedTones(prev =>
       prev.includes(tone) ? prev.filter(t => t !== tone) : [...prev, tone]
@@ -406,6 +602,37 @@ const AdCopyManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Meta 連線狀態提示 ── */}
+      {metaStatus.connected ? (
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 text-xs text-blue-700">
+          <Send size={13} />
+          已連結 Meta：<span className="font-semibold">{metaStatus.userName}</span>
+          {metaStatus.adAccountName && (
+            <span className="text-blue-500 ml-1">｜廣告帳號：{metaStatus.adAccountName}</span>
+          )}
+          {!metaStatus.adAccountId && (
+            <span className="text-amber-600 ml-2">⚠ 請先至設定頁選擇廣告帳號</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-500">
+          <Send size={13} />
+          尚未串接 Meta 廣告帳號 —
+          <a href="#/settings" className="text-blue-600 hover:underline font-medium">前往設定頁串接</a>
+          後可直接從這裡發布廣告草稿
+        </div>
+      )}
+
+      {/* ── Publish Modal ── */}
+      {publishTarget && (
+        <MetaPublishModal
+          copy={publishTarget}
+          metaStatus={metaStatus}
+          onClose={() => setPublishTarget(null)}
+          onPublished={updated => { updateAdCopy(updated); setPublishTarget(null) }}
+        />
+      )}
 
       {/* ── 文案產生器 ── */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
@@ -591,6 +818,8 @@ const AdCopyManager: React.FC = () => {
                 onUpdate={updateAdCopy}
                 onDelete={id => window.confirm('確定刪除此文案？') && removeAdCopy(id)}
                 onDuplicate={handleDuplicate}
+                onPublish={setPublishTarget}
+                metaConnected={metaStatus.connected && !!metaStatus.adAccountId}
               />
             ))}
           </div>

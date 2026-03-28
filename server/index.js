@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const Database = require('better-sqlite3')
 const path = require('path')
+const https = require('https')
 
 const app = express()
 const PORT = process.env.PORT || 8080
@@ -728,6 +729,191 @@ app.post('/api/settings/clear-all', (_req, res) => {
     db.prepare("UPDATE settings SET value='false' WHERE key='demo_mode'").run()
   })()
   res.json({ ok: true })
+})
+
+// ─── Meta API Proxy ────────────────────────────────────────────────────────
+
+db.exec(`CREATE TABLE IF NOT EXISTS meta_config (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
+)`)
+
+function metaCfg(key) {
+  return db.prepare('SELECT value FROM meta_config WHERE key=?').get(key)?.value ?? ''
+}
+function setMetaCfg(key, value) {
+  db.prepare('INSERT OR REPLACE INTO meta_config VALUES (?,?)').run(key, String(value))
+}
+
+// Low-level Meta Graph API helpers (no extra dependencies — uses built-in https)
+function metaFetch(apiPath, token) {
+  return new Promise((resolve, reject) => {
+    const sep  = apiPath.includes('?') ? '&' : '?'
+    const full = `/v19.0${apiPath}${sep}access_token=${encodeURIComponent(token)}`
+    https.get({ hostname: 'graph.facebook.com', path: full, headers: { 'User-Agent': 'sme-system/1.0' } }, (res) => {
+      let data = ''
+      res.on('data', c => data += c)
+      res.on('end', () => { try { resolve(JSON.parse(data)) } catch (e) { reject(e) } })
+    }).on('error', reject)
+  })
+}
+function metaPost(apiPath, token, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({ ...body, access_token: token })
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path: `/v19.0${apiPath}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'User-Agent': 'sme-system/1.0' },
+    }, (res) => {
+      let data = ''
+      res.on('data', c => data += c)
+      res.on('end', () => { try { resolve(JSON.parse(data)) } catch (e) { reject(e) } })
+    })
+    req.on('error', reject)
+    req.write(payload)
+    req.end()
+  })
+}
+
+app.get('/api/meta/status', (_req, res) => {
+  res.json({
+    connected:      !!metaCfg('access_token'),
+    userName:       metaCfg('user_name')       || undefined,
+    userId:         metaCfg('user_id')         || undefined,
+    adAccountId:    metaCfg('ad_account_id')   || undefined,
+    adAccountName:  metaCfg('ad_account_name') || undefined,
+    connectedAt:    metaCfg('connected_at')    || undefined,
+  })
+})
+
+app.post('/api/meta/connect', async (req, res) => {
+  const { access_token } = req.body
+  if (!access_token) return res.status(400).json({ error: '請提供 Access Token' })
+  try {
+    const me = await metaFetch('/me?fields=id,name', access_token)
+    if (me.error) return res.status(400).json({ error: me.error.message })
+    setMetaCfg('access_token', access_token)
+    setMetaCfg('user_id',     me.id)
+    setMetaCfg('user_name',   me.name)
+    setMetaCfg('connected_at', new Date().toISOString())
+    setMetaCfg('ad_account_id',   '')
+    setMetaCfg('ad_account_name', '')
+    res.json({ ok: true, userName: me.name, userId: me.id })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.delete('/api/meta/disconnect', (_req, res) => {
+  ['access_token','user_id','user_name','ad_account_id','ad_account_name','connected_at']
+    .forEach(k => db.prepare('DELETE FROM meta_config WHERE key=?').run(k))
+  res.json({ ok: true })
+})
+
+app.put('/api/meta/ad-account', (req, res) => {
+  const { adAccountId, adAccountName } = req.body
+  setMetaCfg('ad_account_id',   adAccountId)
+  setMetaCfg('ad_account_name', adAccountName)
+  res.json({ ok: true })
+})
+
+app.get('/api/meta/ad-accounts', async (_req, res) => {
+  const token = metaCfg('access_token')
+  if (!token) return res.status(401).json({ error: '尚未連結 Meta 帳號' })
+  try {
+    const data = await metaFetch('/me/adaccounts?fields=id,name,currency,account_status&limit=25', token)
+    if (data.error) return res.status(400).json({ error: data.error.message })
+    res.json(data.data ?? [])
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/meta/campaigns', async (req, res) => {
+  const token = metaCfg('access_token')
+  if (!token) return res.status(401).json({ error: '尚未連結 Meta 帳號' })
+  const adAccountId = req.query.adAccountId || metaCfg('ad_account_id')
+  if (!adAccountId) return res.status(400).json({ error: '請先選擇廣告帳號' })
+  try {
+    const data = await metaFetch(`/${adAccountId}/campaigns?fields=id,name,status,objective&limit=50`, token)
+    if (data.error) return res.status(400).json({ error: data.error.message })
+    res.json(data.data ?? [])
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/meta/adsets', async (req, res) => {
+  const token = metaCfg('access_token')
+  if (!token) return res.status(401).json({ error: '尚未連結 Meta 帳號' })
+  const { campaignId } = req.query
+  if (!campaignId) return res.status(400).json({ error: '請提供 campaignId' })
+  try {
+    const data = await metaFetch(`/${campaignId}/adsets?fields=id,name,status&limit=50`, token)
+    if (data.error) return res.status(400).json({ error: data.error.message })
+    res.json(data.data ?? [])
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/meta/pages', async (_req, res) => {
+  const token = metaCfg('access_token')
+  if (!token) return res.status(401).json({ error: '尚未連結 Meta 帳號' })
+  try {
+    const data = await metaFetch('/me/accounts?fields=id,name,access_token&limit=25', token)
+    if (data.error) return res.status(400).json({ error: data.error.message })
+    res.json(data.data ?? [])
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/meta/publish
+// body: { adCopyId, adSetId, pageId, pageAccessToken, destinationUrl }
+app.post('/api/meta/publish', async (req, res) => {
+  const token = metaCfg('access_token')
+  if (!token) return res.status(401).json({ error: '尚未連結 Meta 帳號' })
+  const adAccountId = metaCfg('ad_account_id')
+  if (!adAccountId) return res.status(400).json({ error: '請先在設定頁選擇廣告帳號' })
+
+  const { adCopyId, adSetId, pageId, pageAccessToken, destinationUrl } = req.body
+  const copy = db.prepare('SELECT * FROM ad_copies WHERE id=?').get(adCopyId)
+  if (!copy) return res.status(404).json({ error: '找不到文案' })
+
+  const ctaMap = {
+    '立即了解':'LEARN_MORE','馬上購買':'SHOP_NOW','立即搶購':'SHOP_NOW',
+    '探索更多':'LEARN_MORE','免費試用':'SIGN_UP','立即預約':'CONTACT_US',
+    '查看優惠':'SHOP_NOW','加入我們':'SUBSCRIBE','馬上看看':'LEARN_MORE',
+  }
+  const ctaType = ctaMap[copy.callToAction] ?? 'LEARN_MORE'
+  const pageToken = pageAccessToken || token
+
+  try {
+    // Step 1: create ad creative
+    const creative = await metaPost(`/${adAccountId}/adcreatives`, pageToken, {
+      name: `[SME] ${copy.headline}`,
+      object_story_spec: {
+        page_id: pageId,
+        link_data: {
+          message:     copy.primaryText,
+          link:        destinationUrl || 'https://example.com',
+          name:        copy.headline,
+          description: copy.description,
+          call_to_action: {
+            type:  ctaType,
+            value: { link: destinationUrl || 'https://example.com' },
+          },
+        },
+      },
+    })
+    if (creative.error) return res.status(400).json({ error: creative.error.message, detail: creative.error })
+
+    // Step 2: create ad (PAUSED draft)
+    const ad = await metaPost(`/${adAccountId}/ads`, token, {
+      name:      `[SME] ${copy.headline} · ${copy.tone}`,
+      adset_id:  adSetId,
+      creative:  { creative_id: creative.id },
+      status:    'PAUSED',
+    })
+    if (ad.error) return res.status(400).json({ error: ad.error.message, detail: ad.error })
+
+    // Step 3: update local status → running
+    db.prepare("UPDATE ad_copies SET status='running' WHERE id=?").run(adCopyId)
+    const updated = db.prepare('SELECT * FROM ad_copies WHERE id=?').get(adCopyId)
+    res.json({ ok: true, adId: ad.id, creativeId: creative.id, adCopy: updated })
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
