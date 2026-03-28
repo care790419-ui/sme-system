@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import {
   Wand2, Save, Trash2, Copy, ChevronDown, ChevronRight,
-  CheckCircle, Clock, Play, Archive, Plus, Edit2, X,
+  CheckCircle, Clock, Play, Archive, Edit2,
 } from 'lucide-react'
 import { AdCopy, AdCopyTone, AdCopyStatus } from '../types'
 import { useApp } from '../context/AppContext'

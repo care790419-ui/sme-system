@@ -188,6 +188,7 @@ export const invoices: Invoice[] = [
     dueDate: '2024-11-30',
     amount: 320000,
     status: 'paid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-11',
     items: [
@@ -202,6 +203,7 @@ export const invoices: Invoice[] = [
     dueDate: '2024-12-15',
     amount: 450000,
     status: 'paid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-11',
     items: [
@@ -216,6 +218,7 @@ export const invoices: Invoice[] = [
     dueDate: '2024-12-31',
     amount: 280000,
     status: 'unpaid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-12',
     items: [
@@ -230,6 +233,7 @@ export const invoices: Invoice[] = [
     dueDate: '2024-12-05',
     amount: 195000,
     status: 'overdue',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-11',
     items: [
@@ -244,6 +248,7 @@ export const invoices: Invoice[] = [
     dueDate: '2025-01-10',
     amount: 168000,
     status: 'unpaid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-12',
     items: [
@@ -258,6 +263,7 @@ export const invoices: Invoice[] = [
     dueDate: '2024-11-15',
     amount: 95000,
     status: 'overdue',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-10',
     items: [
@@ -272,6 +278,7 @@ export const invoices: Invoice[] = [
     dueDate: '2025-01-15',
     amount: 220000,
     status: 'unpaid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-12',
     items: [
@@ -286,6 +293,7 @@ export const invoices: Invoice[] = [
     dueDate: '2025-01-20',
     amount: 380000,
     status: 'unpaid',
+    invoiceNumber: '',
     taxRate: 0.05,
     taxMonth: '2024-12',
     items: [
