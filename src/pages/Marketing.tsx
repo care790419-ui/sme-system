@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import EditableCell from '../components/EditableCell'
+import AdCopyManager from '../components/AdCopyManager'
 import { useApp } from '../context/AppContext'
 import { Campaign } from '../types'
 import { platformColors } from '../data/mockData'
@@ -44,7 +45,7 @@ function SaveToast({ visible }: { visible: boolean }) {
 const Marketing: React.FC = () => {
   const { state, saveCampaign, createCampaign, removeCampaign } = useApp()
   const { campaigns } = state
-  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms'>('overview')
+  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms' | 'copies'>('overview')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -160,6 +161,7 @@ const Marketing: React.FC = () => {
     { id: 'campaigns',  label: '活動管理' },
     { id: 'roi',        label: 'ROI 分析' },
     { id: 'platforms',  label: '平台比較' },
+    { id: 'copies',     label: '廣告文案' },
   ] as const
 
   return (
@@ -568,6 +570,9 @@ const Marketing: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* ── 廣告文案 ── */}
+          {tab === 'copies' && <AdCopyManager />}
         </div>
       </div>
     </div>

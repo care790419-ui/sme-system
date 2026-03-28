@@ -107,6 +107,27 @@ export interface ProductCost {
   month: string
 }
 
+export type AdCopyTone = 'professional' | 'casual' | 'urgent' | 'emotional'
+export type AdCopyStatus = 'draft' | 'approved' | 'running' | 'archived'
+
+export interface AdCopy {
+  id: string
+  groupId: string          // 同一次產生的群組 ID
+  version: number          // 同 groupId 下的版本號
+  status: AdCopyStatus
+  platform: string         // Facebook | Instagram | Google | LINE | YouTube | TikTok
+  format: string           // feed | story | reels | search | display
+  productName: string      // 商品名稱（產生文案用）
+  targetAudience: string   // 目標受眾描述
+  tone: AdCopyTone
+  headline: string         // 主標題
+  primaryText: string      // 主文案
+  description: string      // 描述/副標
+  callToAction: string     // CTA 按鈕文字
+  notes: string            // 備註
+  createdAt: string
+}
+
 export interface SalesChannel {
   id: string
   name: string

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react'
-import { Transaction, Invoice, CostItem, Campaign, MonthlyData } from '../types'
+import { Transaction, Invoice, CostItem, Campaign, MonthlyData, AdCopy } from '../types'
 
 export interface AppState {
   transactions: Transaction[]
@@ -7,6 +7,7 @@ export interface AppState {
   costItems: CostItem[]
   campaigns: Campaign[]
   monthlyData: MonthlyData[]
+  adCopies: AdCopy[]
   loading: boolean
   error: string | null
 }
@@ -29,6 +30,9 @@ export type AppAction =
   | { type: 'DELETE_CAMPAIGN'; payload: string }
   | { type: 'IMPORT_TRANSACTIONS'; payload: Transaction[] }
   | { type: 'IMPORT_INVOICES'; payload: Invoice[] }
+  | { type: 'ADD_AD_COPY'; payload: AdCopy[] }
+  | { type: 'UPDATE_AD_COPY'; payload: AdCopy }
+  | { type: 'DELETE_AD_COPY'; payload: string }
 
 const initialState: AppState = {
   transactions: [],
@@ -36,6 +40,7 @@ const initialState: AppState = {
   costItems: [],
   campaigns: [],
   monthlyData: [],
+  adCopies: [],
   loading: true,
   error: null,
 }
@@ -163,6 +168,13 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'IMPORT_INVOICES':
       return { ...state, invoices: [...action.payload, ...state.invoices] }
 
+    case 'ADD_AD_COPY':
+      return { ...state, adCopies: [...action.payload, ...state.adCopies] }
+    case 'UPDATE_AD_COPY':
+      return { ...state, adCopies: state.adCopies.map(c => c.id === action.payload.id ? action.payload : c) }
+    case 'DELETE_AD_COPY':
+      return { ...state, adCopies: state.adCopies.filter(c => c.id !== action.payload) }
+
     default:
       return state
   }
@@ -205,6 +217,10 @@ interface CtxType {
   saveCampaign:   (c: Campaign) => Promise<void>
   createCampaign: (c: Campaign) => Promise<void>
   removeCampaign: (id: string)  => Promise<void>
+
+  saveAdCopies:   (copies: AdCopy[]) => Promise<void>
+  updateAdCopy:   (copy: AdCopy)     => Promise<void>
+  removeAdCopy:   (id: string)       => Promise<void>
 }
 
 const AppContext = createContext<CtxType | null>(null)
@@ -214,8 +230,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     dispatch({ type: 'SET_LOADING', payload: true })
-    get<Omit<AppState, 'loading' | 'error'>>('/api/data')
-      .then(data => dispatch({ type: 'LOAD_DATA', payload: data }))
+    Promise.all([
+      get<Omit<AppState, 'loading' | 'error' | 'adCopies'>>('/api/data'),
+      get<AdCopy[]>('/api/ad-copies'),
+    ])
+      .then(([data, adCopies]) => {
+        dispatch({ type: 'LOAD_DATA', payload: { ...data, adCopies } })
+      })
       .catch(err => {
         console.error('Failed to load data from API:', err)
         dispatch({ type: 'SET_ERROR', payload: '無法連接伺服器，請確認後端已啟動' })
@@ -308,6 +329,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await del(`/api/transactions/CAM-SYNC-${id}`).catch(() => {/* ignore */})
   }, [])
 
+  // ── Ad Copies ──
+  const saveAdCopies = useCallback(async (copies: AdCopy[]) => {
+    dispatch({ type: 'ADD_AD_COPY', payload: copies })
+    await post('/api/ad-copies', copies)
+  }, [])
+
+  const updateAdCopy = useCallback(async (copy: AdCopy) => {
+    dispatch({ type: 'UPDATE_AD_COPY', payload: copy })
+    await put(`/api/ad-copies/${copy.id}`, copy)
+  }, [])
+
+  const removeAdCopy = useCallback(async (id: string) => {
+    dispatch({ type: 'DELETE_AD_COPY', payload: id })
+    await del(`/api/ad-copies/${id}`)
+  }, [])
+
   return (
     <AppContext.Provider value={{
       state, dispatch,
@@ -315,6 +352,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveInvoice, createInvoice, removeInvoice,
       saveCost, createCost, removeCost,
       saveCampaign, createCampaign, removeCampaign,
+      saveAdCopies, updateAdCopy, removeAdCopy,
     }}>
       {children}
     </AppContext.Provider>

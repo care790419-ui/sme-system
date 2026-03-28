@@ -137,6 +137,27 @@ db.exec(`
   );
 `)
 
+// ─── Ad Copies table ────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ad_copies (
+    id             TEXT PRIMARY KEY,
+    groupId        TEXT NOT NULL DEFAULT '',
+    version        INTEGER NOT NULL DEFAULT 1,
+    status         TEXT NOT NULL DEFAULT 'draft',
+    platform       TEXT NOT NULL DEFAULT '',
+    format         TEXT NOT NULL DEFAULT 'feed',
+    productName    TEXT NOT NULL DEFAULT '',
+    targetAudience TEXT NOT NULL DEFAULT '',
+    tone           TEXT NOT NULL DEFAULT 'professional',
+    headline       TEXT NOT NULL DEFAULT '',
+    primaryText    TEXT NOT NULL DEFAULT '',
+    description    TEXT NOT NULL DEFAULT '',
+    callToAction   TEXT NOT NULL DEFAULT '',
+    notes          TEXT NOT NULL DEFAULT '',
+    createdAt      TEXT NOT NULL DEFAULT ''
+  );
+`)
+
 // ─── Settings table ─────────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS settings (
@@ -507,6 +528,38 @@ app.put('/api/campaigns/:id', (req, res) => {
 
 app.delete('/api/campaigns/:id', (req, res) => {
   db.prepare('DELETE FROM campaigns WHERE id=?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+// ─── Ad Copies ────────────────────────────────────────────────────────────
+app.get('/api/ad-copies', (_req, res) => {
+  res.json(db.prepare('SELECT * FROM ad_copies ORDER BY createdAt DESC').all())
+})
+
+app.post('/api/ad-copies', (req, res) => {
+  const copies = Array.isArray(req.body) ? req.body : [req.body]
+  const stmt = db.prepare(`INSERT OR REPLACE INTO ad_copies
+    (id,groupId,version,status,platform,format,productName,targetAudience,tone,headline,primaryText,description,callToAction,notes,createdAt)
+    VALUES (@id,@groupId,@version,@status,@platform,@format,@productName,@targetAudience,@tone,@headline,@primaryText,@description,@callToAction,@notes,@createdAt)`)
+  const insertAll = db.transaction(rows => rows.forEach(r => stmt.run(r)))
+  try {
+    insertAll(copies)
+    res.json(copies)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+app.put('/api/ad-copies/:id', (req, res) => {
+  const copy = { ...req.body, id: req.params.id }
+  try {
+    db.prepare(`INSERT OR REPLACE INTO ad_copies
+      (id,groupId,version,status,platform,format,productName,targetAudience,tone,headline,primaryText,description,callToAction,notes,createdAt)
+      VALUES (@id,@groupId,@version,@status,@platform,@format,@productName,@targetAudience,@tone,@headline,@primaryText,@description,@callToAction,@notes,@createdAt)`).run(copy)
+    res.json(copy)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+app.delete('/api/ad-copies/:id', (req, res) => {
+  db.prepare('DELETE FROM ad_copies WHERE id=?').run(req.params.id)
   res.json({ ok: true })
 })
 
