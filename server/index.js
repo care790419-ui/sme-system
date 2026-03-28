@@ -138,6 +138,112 @@ db.exec(`
   );
 `)
 
+// ─── Ad Management tables (Phase 1 schema — matches types/index.ts) ─────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS meta_integration_settings (
+    id                  TEXT PRIMARY KEY,
+    brandId             TEXT NOT NULL DEFAULT '',
+    accessToken         TEXT NOT NULL DEFAULT '',
+    defaultAdAccountId  TEXT NOT NULL DEFAULT '',
+    defaultPageId       TEXT NOT NULL DEFAULT '',
+    defaultPixelId      TEXT NOT NULL DEFAULT '',
+    isConnected         INTEGER NOT NULL DEFAULT 0,
+    lastCheckedAt       TEXT NOT NULL DEFAULT '',
+    status              TEXT NOT NULL DEFAULT 'disconnected',
+    updatedAt           TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS ad_campaigns (
+    id                TEXT PRIMARY KEY,
+    brandId           TEXT NOT NULL DEFAULT '',
+    productId         TEXT NOT NULL DEFAULT '',
+    name              TEXT NOT NULL DEFAULT '',
+    objective         TEXT NOT NULL DEFAULT 'CONVERSIONS',
+    budget            REAL NOT NULL DEFAULT 0,
+    startDate         TEXT NOT NULL DEFAULT '',
+    endDate           TEXT NOT NULL DEFAULT '',
+    landingPageUrl    TEXT NOT NULL DEFAULT '',
+    audienceProfileId TEXT NOT NULL DEFAULT '',
+    styleType         TEXT NOT NULL DEFAULT 'product',
+    status            TEXT NOT NULL DEFAULT 'draft',
+    createdAt         TEXT NOT NULL DEFAULT '',
+    updatedAt         TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS ad_copy_versions (
+    id           TEXT PRIMARY KEY,
+    campaignId   TEXT NOT NULL DEFAULT '',
+    productId    TEXT NOT NULL DEFAULT '',
+    primaryText  TEXT NOT NULL DEFAULT '',
+    headline     TEXT NOT NULL DEFAULT '',
+    description  TEXT NOT NULL DEFAULT '',
+    callToAction TEXT NOT NULL DEFAULT '',
+    audienceType TEXT NOT NULL DEFAULT '',
+    styleType    TEXT NOT NULL DEFAULT '',
+    status       TEXT NOT NULL DEFAULT 'draft',
+    createdAt    TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS ad_creatives (
+    id          TEXT PRIMARY KEY,
+    campaignId  TEXT NOT NULL DEFAULT '',
+    imageUrl    TEXT NOT NULL DEFAULT '',
+    imageRatio  TEXT NOT NULL DEFAULT '1:1',
+    title       TEXT NOT NULL DEFAULT '',
+    overlayText TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL DEFAULT 'draft',
+    createdAt   TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS ad_performance (
+    id          TEXT PRIMARY KEY,
+    campaignId  TEXT NOT NULL DEFAULT '',
+    spend       REAL NOT NULL DEFAULT 0,
+    impressions INTEGER NOT NULL DEFAULT 0,
+    clicks      INTEGER NOT NULL DEFAULT 0,
+    ctr         REAL NOT NULL DEFAULT 0,
+    cpc         REAL NOT NULL DEFAULT 0,
+    purchases   INTEGER NOT NULL DEFAULT 0,
+    roas        REAL NOT NULL DEFAULT 0,
+    status      TEXT NOT NULL DEFAULT 'paused',
+    updatedAt   TEXT NOT NULL DEFAULT ''
+  );
+`)
+
+// CRUD routes for ad management (ready for Phase 2 real API)
+app.get('/api/ad-campaigns', (_req, res) =>
+  res.json(db.prepare('SELECT * FROM ad_campaigns ORDER BY createdAt DESC').all()))
+app.post('/api/ad-campaigns', (req, res) => {
+  const c = req.body
+  try { db.prepare(`INSERT OR REPLACE INTO ad_campaigns VALUES (@id,@brandId,@productId,@name,@objective,@budget,@startDate,@endDate,@landingPageUrl,@audienceProfileId,@styleType,@status,@createdAt,@updatedAt)`).run(c); res.json(c) }
+  catch (e) { res.status(400).json({ error: e.message }) }
+})
+app.put('/api/ad-campaigns/:id', (req, res) => {
+  const c = { ...req.body, id: req.params.id }
+  try { db.prepare(`INSERT OR REPLACE INTO ad_campaigns VALUES (@id,@brandId,@productId,@name,@objective,@budget,@startDate,@endDate,@landingPageUrl,@audienceProfileId,@styleType,@status,@createdAt,@updatedAt)`).run(c); res.json(c) }
+  catch (e) { res.status(400).json({ error: e.message }) }
+})
+app.delete('/api/ad-campaigns/:id', (req, res) => {
+  db.prepare('DELETE FROM ad_campaigns WHERE id=?').run(req.params.id); res.json({ ok: true })
+})
+
+app.get('/api/ad-copy-versions', (_req, res) =>
+  res.json(db.prepare('SELECT * FROM ad_copy_versions ORDER BY createdAt DESC').all()))
+app.post('/api/ad-copy-versions', (req, res) => {
+  const v = req.body
+  try { db.prepare(`INSERT OR REPLACE INTO ad_copy_versions VALUES (@id,@campaignId,@productId,@primaryText,@headline,@description,@callToAction,@audienceType,@styleType,@status,@createdAt)`).run(v); res.json(v) }
+  catch (e) { res.status(400).json({ error: e.message }) }
+})
+app.put('/api/ad-copy-versions/:id', (req, res) => {
+  const v = { ...req.body, id: req.params.id }
+  try { db.prepare(`INSERT OR REPLACE INTO ad_copy_versions VALUES (@id,@campaignId,@productId,@primaryText,@headline,@description,@callToAction,@audienceType,@styleType,@status,@createdAt)`).run(v); res.json(v) }
+  catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+app.get('/api/ad-performance', (_req, res) =>
+  res.json(db.prepare('SELECT * FROM ad_performance ORDER BY updatedAt DESC').all()))
+app.put('/api/ad-performance/:id', (req, res) => {
+  const p = { ...req.body, id: req.params.id }
+  try { db.prepare(`INSERT OR REPLACE INTO ad_performance VALUES (@id,@campaignId,@spend,@impressions,@clicks,@ctr,@cpc,@purchases,@roas,@status,@updatedAt)`).run(p); res.json(p) }
+  catch (e) { res.status(400).json({ error: e.message }) }
+})
+
 // ─── Ad Copies table ────────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS ad_copies (

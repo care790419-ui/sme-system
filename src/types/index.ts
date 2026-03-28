@@ -165,6 +165,81 @@ export interface MetaStatus {
   connectedAt?: string
 }
 
+// ── Ad Management Models (Phase 1 — Mock → API ready) ─────────────────────────
+
+export type AdObjective = 'CONVERSIONS' | 'TRAFFIC' | 'AWARENESS' | 'ENGAGEMENT' | 'LEAD_GENERATION'
+export type AdStyleType = 'product' | 'lifestyle' | 'testimonial' | 'promotional'
+export type AdCampaignStatus = 'draft' | 'active' | 'paused' | 'ended' | 'error'
+
+export interface MetaIntegrationSettings {
+  id: string
+  brandId: string
+  accessToken: string          // masked in UI, real value server-side only
+  defaultAdAccountId: string
+  defaultPageId: string
+  defaultPixelId: string
+  isConnected: boolean
+  lastCheckedAt: string        // ISO
+  status: 'active' | 'expired' | 'error' | 'disconnected'
+  updatedAt: string
+}
+
+export interface AdCampaign {
+  id: string
+  brandId: string
+  productId: string
+  name: string
+  objective: AdObjective
+  budget: number               // NT$
+  startDate: string
+  endDate: string
+  landingPageUrl: string
+  audienceProfileId: string
+  styleType: AdStyleType
+  status: AdCampaignStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdCopyVersion {
+  id: string
+  campaignId: string
+  productId: string
+  primaryText: string
+  headline: string
+  description: string
+  callToAction: string
+  audienceType: string
+  styleType: string
+  status: 'draft' | 'approved' | 'running' | 'archived'
+  createdAt: string
+}
+
+export interface AdCreative {
+  id: string
+  campaignId: string
+  imageUrl: string
+  imageRatio: '1:1' | '4:5' | '9:16' | '1.91:1'
+  title: string
+  overlayText: string
+  status: 'draft' | 'approved' | 'running' | 'archived'
+  createdAt: string
+}
+
+export interface AdPerformance {
+  id: string
+  campaignId: string
+  spend: number                // NT$
+  impressions: number
+  clicks: number
+  ctr: number                  // %
+  cpc: number                  // NT$ per click
+  purchases: number
+  roas: number                 // x multiplier
+  status: 'live' | 'paused' | 'ended'
+  updatedAt: string
+}
+
 export interface SalesChannel {
   id: string
   name: string

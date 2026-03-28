@@ -11,6 +11,8 @@ import {
 import StatCard from '../components/StatCard'
 import EditableCell from '../components/EditableCell'
 import AdCopyManager from '../components/AdCopyManager'
+import AdCampaignManager from '../components/AdCampaignManager'
+import AdPerformanceDashboard from '../components/AdPerformanceDashboard'
 import { useApp } from '../context/AppContext'
 import { Campaign } from '../types'
 import { platformColors } from '../data/mockData'
@@ -45,7 +47,7 @@ function SaveToast({ visible }: { visible: boolean }) {
 const Marketing: React.FC = () => {
   const { state, saveCampaign, createCampaign, removeCampaign } = useApp()
   const { campaigns } = state
-  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms' | 'copies'>('overview')
+  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms' | 'copies' | 'adcampaigns' | 'performance'>('overview')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -161,7 +163,9 @@ const Marketing: React.FC = () => {
     { id: 'campaigns',  label: '活動管理' },
     { id: 'roi',        label: 'ROI 分析' },
     { id: 'platforms',  label: '平台比較' },
-    { id: 'copies',     label: '廣告文案' },
+    { id: 'copies',      label: '廣告文案' },
+    { id: 'adcampaigns', label: '廣告活動' },
+    { id: 'performance', label: '成效分析' },
   ] as const
 
   return (
@@ -573,6 +577,12 @@ const Marketing: React.FC = () => {
 
           {/* ── 廣告文案 ── */}
           {tab === 'copies' && <AdCopyManager />}
+
+          {/* ── 廣告活動 ── */}
+          {tab === 'adcampaigns' && <AdCampaignManager />}
+
+          {/* ── 成效分析 ── */}
+          {tab === 'performance' && <AdPerformanceDashboard />}
         </div>
       </div>
     </div>
