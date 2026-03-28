@@ -73,29 +73,37 @@ function parseCSV(text: string): ParsedOrder[] {
 
   const headers = splitRow(lines[0])
 
+  // 關鍵字前加 "=" 表示完全匹配（避免短字誤抓），否則為 includes 模糊匹配
   const findCol = (...names: string[]) => {
     for (const n of names) {
-      const idx = headers.findIndex(h => h.includes(n))
-      if (idx >= 0) return idx
+      if (n.startsWith('=')) {
+        const exact = n.slice(1)
+        const idx = headers.findIndex(h => h.trim() === exact)
+        if (idx >= 0) return idx
+      } else {
+        const idx = headers.findIndex(h => h.includes(n))
+        if (idx >= 0) return idx
+      }
     }
     return -1
   }
 
   const cols = {
     id:        findCol('訂單編號', '訂單號碼', '交易編號', '訂貨編號', '單號', 'Order ID', 'OrderId', 'Order Number', 'order_id'),
-    date:      findCol('建立時間', '下單時間', '訂購日期', '訂單日期', '成立日期', '日期', 'Date'),
-    customer:  findCol('買家姓名', '收件姓名', '訂購人姓名', '購買人姓名', '收件人姓名',
-                       '收件人', '買家', '訂購人', '購買人', '下單人', '訂購者', '姓名', '會員', 'Customer', 'Buyer'),
-    phone:     findCol('電話', '手機', '聯絡電話', 'Phone', 'Mobile'),
-    orderAmt:  findCol('訂單金額', '訂單總額', '總金額', '訂單小計', '實付金額', '付款金額', 'Order Total'),
-    payment:   findCol('付款狀態', '付款方式狀態', '付款', 'Payment Status'),
+    date:      findCol('建立日期', '建立時間', '下單時間', '訂購日期', '訂單日期', '成立日期', '日期', 'Date'),
+    // 1shop: "名稱" = 真實姓名，"顧客" = 帳號名稱，優先取真實姓名（用精確匹配避免誤抓產品名稱）
+    customer:  findCol('=名稱', '=顧客', '買家姓名', '收件姓名', '訂購人姓名', '購買人姓名', '收件人姓名',
+                       '收件人', '買家', '訂購人', '購買人', '下單人', '訂購者', '會員', 'Customer', 'Buyer'),
+    phone:     findCol('顧客電話', '電話', '手機', '聯絡電話', 'Phone', 'Mobile'),
+    orderAmt:  findCol('=總計金額', '訂單金額', '訂單總額', '總金額', '訂單小計', '實付金額', '付款金額', 'Order Total'),
+    payment:   findCol('=金流狀態', '付款狀態', '付款方式狀態', '付款', 'Payment Status'),
     status:    findCol('訂單狀態', '出貨狀態', '狀態', 'Status'),
     // item-level columns
-    itemName:  findCol('商品名稱', '品名', '商品', '產品名稱', 'Product Name', 'Item'),
-    variant:   findCol('規格', '款式', '選項', '商品規格', 'Variant', 'SKU', 'Option'),
-    qty:       findCol('數量', '購買數量', 'Qty', 'Quantity'),
-    unitPrice: findCol('商品售價', '單價', '售價', 'Unit Price', 'Price'),
-    itemAmt:   findCol('商品小計', '小計', '金額', 'Subtotal', 'Line Total'),
+    itemName:  findCol('產品名稱', '=產品', '商品名稱', '品名', '商品', 'Product Name', 'Item'),
+    variant:   findCol('產品SKU', '規格', '款式', '選項', '商品規格', 'Variant', 'SKU', 'Option'),
+    qty:       findCol('=產品數量', '數量', '購買數量', 'Qty', 'Quantity'),
+    unitPrice: findCol('=單價', '商品售價', '售價', 'Unit Price', 'Price'),
+    itemAmt:   findCol('=小計', '商品小計', '金額', 'Subtotal', 'Line Total'),
   }
 
   const parseDate = (raw: string): string => {
@@ -190,7 +198,8 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const ts = Date.now()
 
     const isPaidStatus = (s: string) =>
-      s.includes('已付') || s.includes('完成') || s.includes('成功') || s.includes('已收款')
+      s.includes('已付') || s.includes('完成') || s.includes('成功') || s.includes('已收款') ||
+      s.includes('已請款') || s.includes('付款確認') || s.includes('請款成功')
 
     // ── Transactions (訂單收入) ──
     const txs: Transaction[] = orders.map(o => {
