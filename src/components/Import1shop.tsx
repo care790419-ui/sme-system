@@ -82,11 +82,12 @@ function parseCSV(text: string): ParsedOrder[] {
   }
 
   const cols = {
-    id:        findCol('訂單編號', '單號', 'Order ID', 'OrderId'),
-    date:      findCol('建立時間', '下單時間', '訂購日期', '訂單日期', '日期', 'Date'),
-    customer:  findCol('收件人', '買家', '訂購人', '姓名', '會員', 'Customer'),
-    phone:     findCol('電話', '手機', 'Phone', 'Mobile'),
-    orderAmt:  findCol('訂單金額', '訂單總額', '總金額', '訂單小計', 'Order Total'),
+    id:        findCol('訂單編號', '訂單號碼', '交易編號', '訂貨編號', '單號', 'Order ID', 'OrderId', 'Order Number', 'order_id'),
+    date:      findCol('建立時間', '下單時間', '訂購日期', '訂單日期', '成立日期', '日期', 'Date'),
+    customer:  findCol('買家姓名', '收件姓名', '訂購人姓名', '購買人姓名', '收件人姓名',
+                       '收件人', '買家', '訂購人', '購買人', '下單人', '訂購者', '姓名', '會員', 'Customer', 'Buyer'),
+    phone:     findCol('電話', '手機', '聯絡電話', 'Phone', 'Mobile'),
+    orderAmt:  findCol('訂單金額', '訂單總額', '總金額', '訂單小計', '實付金額', '付款金額', 'Order Total'),
     payment:   findCol('付款狀態', '付款方式狀態', '付款', 'Payment Status'),
     status:    findCol('訂單狀態', '出貨狀態', '狀態', 'Status'),
     // item-level columns
@@ -229,15 +230,16 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               total:       Math.round(o.total / (1 + taxRate)),
             }]
         return {
-          id:       `INV-1SHOP-${o.orderId}-${ts}`,
-          client:   o.customer,
-          date:     o.date,
-          dueDate:  addDaysCST(o.date, 30),
-          amount:   o.total,
+          id:            `INV-1SHOP-${o.orderId}-${ts}`,
+          invoiceNumber: '',
+          client:        o.customer,
+          date:          o.date,
+          dueDate:       addDaysCST(o.date, 30),
+          amount:        o.total,
           taxRate,
-          taxMonth: toMonth(o.date),
-          status:   isPaidStatus(o.paymentStatus) ? 'paid' as const : 'unpaid' as const,
-          items:    invItems,
+          taxMonth:      toMonth(o.date),
+          status:        isPaidStatus(o.paymentStatus) ? 'paid' as const : 'unpaid' as const,
+          items:         invItems,
         }
       })
       importInvoices(invs)
@@ -353,7 +355,7 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <div className="space-y-3">
                   {/* Summary bar */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-sm font-semibold text-gray-700">
                         {orders.length} 筆訂單
                       </span>
@@ -365,6 +367,16 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
                         已付款 {paidCount} 筆
                       </span>
+                      {orders.some(o => o.customer === '未知客戶') && (
+                        <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                          ⚠️ 部分訂購人未識別
+                        </span>
+                      )}
+                      {orders.some(o => o.orderId.startsWith('ROW-')) && (
+                        <span className="text-xs bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full">
+                          ⚠️ 部分訂單編號未識別
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-sm font-bold text-emerald-600">
@@ -409,12 +421,18 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                       : <ChevronRight size={13} />
                                   )}
                                 </td>
-                                <td className="py-2 px-3 font-mono text-gray-500 max-w-[120px] truncate" title={o.orderId}>
-                                  {o.orderId}
+                                <td className="py-2 px-3 font-mono max-w-[120px] truncate" title={o.orderId}>
+                                  {o.orderId.startsWith('ROW-')
+                                    ? <span className="text-yellow-600">{o.orderId}</span>
+                                    : <span className="text-gray-600">{o.orderId}</span>
+                                  }
                                 </td>
                                 <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{o.date}</td>
-                                <td className="py-2 px-3 text-gray-700 max-w-[100px] truncate" title={o.customer}>
-                                  {o.customer}
+                                <td className="py-2 px-3 max-w-[100px] truncate" title={o.customer}>
+                                  {o.customer === '未知客戶'
+                                    ? <span className="text-red-400 italic">{o.customer}</span>
+                                    : <span className="text-gray-700 font-medium">{o.customer}</span>
+                                  }
                                 </td>
                                 <td className="py-2 px-3">
                                   {o.items.length > 0 ? (
