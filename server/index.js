@@ -236,6 +236,41 @@ app.put('/api/ad-copy-versions/:id', (req, res) => {
   catch (e) { res.status(400).json({ error: e.message }) }
 })
 
+// ─── Ad Creatives routes ─────────────────────────────────────────────────────
+// Migrations: add new optional columns to existing table
+try { db.exec("ALTER TABLE ad_creatives ADD COLUMN copyVersionId TEXT NOT NULL DEFAULT ''") } catch (_) {}
+try { db.exec("ALTER TABLE ad_creatives ADD COLUMN productName   TEXT NOT NULL DEFAULT ''") } catch (_) {}
+try { db.exec("ALTER TABLE ad_creatives ADD COLUMN aiPrompt      TEXT NOT NULL DEFAULT ''") } catch (_) {}
+
+app.get('/api/ad-creatives', (_req, res) =>
+  res.json(db.prepare('SELECT * FROM ad_creatives ORDER BY createdAt DESC').all()))
+
+app.post('/api/ad-creatives', (req, res) => {
+  const c = req.body
+  const row = { ...c, copyVersionId: c.copyVersionId ?? '', productName: c.productName ?? '', aiPrompt: c.aiPrompt ?? '' }
+  try {
+    db.prepare(`INSERT OR REPLACE INTO ad_creatives
+      VALUES (@id,@campaignId,@imageUrl,@imageRatio,@title,@overlayText,@status,@createdAt,@copyVersionId,@productName,@aiPrompt)`)
+      .run(row)
+    res.json(row)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+app.put('/api/ad-creatives/:id', (req, res) => {
+  const c = { ...req.body, id: req.params.id, copyVersionId: req.body.copyVersionId ?? '', productName: req.body.productName ?? '', aiPrompt: req.body.aiPrompt ?? '' }
+  try {
+    db.prepare(`INSERT OR REPLACE INTO ad_creatives
+      VALUES (@id,@campaignId,@imageUrl,@imageRatio,@title,@overlayText,@status,@createdAt,@copyVersionId,@productName,@aiPrompt)`)
+      .run(c)
+    res.json(c)
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+app.delete('/api/ad-creatives/:id', (req, res) => {
+  db.prepare('DELETE FROM ad_creatives WHERE id=?').run(req.params.id)
+  res.json({ ok: true })
+})
+
 app.get('/api/ad-performance', (_req, res) =>
   res.json(db.prepare('SELECT * FROM ad_performance ORDER BY updatedAt DESC').all()))
 app.put('/api/ad-performance/:id', (req, res) => {

@@ -218,12 +218,16 @@ export interface AdCopyVersion {
 export interface AdCreative {
   id: string
   campaignId: string
-  imageUrl: string
+  imageUrl: string             // file:// / blob: / https://  (後端改為 CDN URL)
   imageRatio: '1:1' | '4:5' | '9:16' | '1.91:1'
   title: string
   overlayText: string
   status: 'draft' | 'approved' | 'running' | 'archived'
   createdAt: string
+  // Extended fields (Phase 1+)
+  copyVersionId?: string       // 綁定文案版本
+  productName?: string         // 商品名稱（方便顯示）
+  aiPrompt?: string            // AI 圖片生成 prompt（Phase 2）
 }
 
 export interface AdPerformance {

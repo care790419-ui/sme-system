@@ -14,6 +14,7 @@ import AdCopyManager from '../components/AdCopyManager'
 import AdCampaignManager from '../components/AdCampaignManager'
 import AdPerformanceDashboard from '../components/AdPerformanceDashboard'
 import AdCopyFactory from '../components/AdCopyFactory'
+import AdCreativeFactory from '../components/AdCreativeFactory'
 import { useApp } from '../context/AppContext'
 import { Campaign } from '../types'
 import { platformColors } from '../data/mockData'
@@ -48,7 +49,7 @@ function SaveToast({ visible }: { visible: boolean }) {
 const Marketing: React.FC = () => {
   const { state, saveCampaign, createCampaign, removeCampaign } = useApp()
   const { campaigns } = state
-  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms' | 'copies' | 'adcampaigns' | 'performance' | 'factory'>('overview')
+  const [tab, setTab] = useState<'overview' | 'campaigns' | 'roi' | 'platforms' | 'copies' | 'adcampaigns' | 'performance' | 'factory' | 'creative'>('overview')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'ended'>('all')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -168,6 +169,7 @@ const Marketing: React.FC = () => {
     { id: 'adcampaigns', label: '廣告活動' },
     { id: 'performance', label: '成效分析' },
     { id: 'factory',     label: '✨ AI 文案工廠' },
+    { id: 'creative',    label: '🖼 素材工廠' },
   ] as const
 
   return (
@@ -588,6 +590,9 @@ const Marketing: React.FC = () => {
 
           {/* ── AI 文案工廠 ── */}
           {tab === 'factory' && <AdCopyFactory />}
+
+          {/* ── 素材工廠 ── */}
+          {tab === 'creative' && <AdCreativeFactory />}
         </div>
       </div>
     </div>

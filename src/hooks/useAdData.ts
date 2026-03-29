@@ -50,7 +50,7 @@ export function useAdData() {
   const [copyVersions, setCopyVersions]       = useState<AdCopyVersion[]>(
     USE_MOCK ? mockCopyVersions : []
   )
-  const [creatives]                           = useState<AdCreative[]>(
+  const [creatives, setCreatives]             = useState<AdCreative[]>(
     USE_MOCK ? mockCreatives : []
   )
   const [performance]                         = useState<AdPerformance[]>(
@@ -113,6 +113,26 @@ export function useAdData() {
     setCopyVersions(prev => prev.map(x => x.id === v.id ? v : x))
   }, [])
 
+  // ── Creative CRUD ─────────────────────────────────────────────────────────
+  const createCreative = useCallback(async (
+    data: Omit<AdCreative, 'id' | 'createdAt'>
+  ): Promise<AdCreative> => {
+    const c: AdCreative = { ...data, id: `CR-${Date.now()}`, createdAt: new Date().toISOString() }
+    if (!USE_MOCK) await apiPost('/api/ad-creatives', c)
+    setCreatives(prev => [c, ...prev])
+    return c
+  }, [])
+
+  const updateCreative = useCallback(async (c: AdCreative) => {
+    if (!USE_MOCK) await apiPut(`/api/ad-creatives/${c.id}`, c)
+    setCreatives(prev => prev.map(x => x.id === c.id ? c : x))
+  }, [])
+
+  const deleteCreative = useCallback(async (id: string) => {
+    if (!USE_MOCK) await apiDel(`/api/ad-creatives/${id}`)
+    setCreatives(prev => prev.filter(x => x.id !== id))
+  }, [])
+
   // ── Selectors ─────────────────────────────────────────────────────────────
   const getPerf        = useCallback((campaignId: string) =>
     performance.find(p => p.campaignId === campaignId), [performance])
@@ -143,6 +163,8 @@ export function useAdData() {
     loadAll, createCampaign, updateCampaign, deleteCampaign,
     // CopyVersion
     createCopyVersion, updateCopyVersion,
+    // Creative
+    createCreative, updateCreative, deleteCreative,
     // Selectors
     getPerf, getCampaignCopyVersions, getCampaignCreatives,
     // Meta info
