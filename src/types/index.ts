@@ -244,6 +244,20 @@ export interface AdPerformance {
   updatedAt: string
 }
 
+export interface SalesRecord {
+  id: string
+  orderId: string
+  date: string
+  month: string
+  customerName: string
+  productName: string
+  variant: string
+  quantity: number
+  unitPrice: number      // 含稅單價
+  subtotal: number       // 含稅小計
+  source: string         // '1shop' | ...
+}
+
 export interface SalesChannel {
   id: string
   name: string

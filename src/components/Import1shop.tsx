@@ -3,7 +3,7 @@ import {
   Upload, X, CheckCircle, AlertTriangle, FileText,
   Download, Info, ChevronDown, ChevronRight, Package,
 } from 'lucide-react'
-import { Transaction, Invoice } from '../types'
+import { Transaction, Invoice, SalesRecord } from '../types'
 import { useApp } from '../context/AppContext'
 import { addDaysCST, toMonth, todayCST } from '../utils/date'
 
@@ -91,9 +91,10 @@ function parseCSV(text: string): ParsedOrder[] {
   const cols = {
     id:        findCol('訂單編號', '訂單號碼', '交易編號', '訂貨編號', '單號', 'Order ID', 'OrderId', 'Order Number', 'order_id'),
     date:      findCol('建立日期', '建立時間', '下單時間', '訂購日期', '訂單日期', '成立日期', '日期', 'Date'),
-    // 1shop: "名稱" = 真實姓名，"顧客" = 帳號名稱，優先取真實姓名（用精確匹配避免誤抓產品名稱）
-    customer:  findCol('=名稱', '=顧客', '買家姓名', '收件姓名', '訂購人姓名', '購買人姓名', '收件人姓名',
-                       '收件人', '買家', '訂購人', '購買人', '下單人', '訂購者', '會員', 'Customer', 'Buyer'),
+    // 優先取訂購人（真實姓名）。1shop: "名稱"=真實姓名, "顧客"=帳號名稱，精確匹配避免誤抓產品名稱
+    customer:  findCol('=訂購人', '=訂購人姓名', '=名稱', '=顧客', '買家姓名', '收件姓名',
+                       '訂購人姓名', '購買人姓名', '收件人姓名', '收件人', '買家', '購買人',
+                       '下單人', '訂購者', '會員', 'Customer', 'Buyer'),
     phone:     findCol('顧客電話', '電話', '手機', '聯絡電話', 'Phone', 'Mobile'),
     orderAmt:  findCol('=總計金額', '訂單金額', '訂單總額', '總金額', '訂單小計', '實付金額', '付款金額', 'Order Total'),
     payment:   findCol('=金流狀態', '付款狀態', '付款方式狀態', '付款', 'Payment Status'),
@@ -171,13 +172,14 @@ function parseCSV(text: string): ParsedOrder[] {
 
 // ── Component ────────────────────────────────────────────────────────────────
 const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { importTransactions, importInvoices } = useApp()
-  const [orders, setOrders]       = useState<ParsedOrder[]>([])
-  const [error, setError]         = useState('')
-  const [done, setDone]           = useState(false)
-  const [dragging, setDragging]   = useState(false)
-  const [createInv, setCreateInv] = useState(true)
-  const [expanded, setExpanded]   = useState<Set<string>>(new Set())
+  const { importTransactions, importInvoices, importSalesRecords } = useApp()
+  const [orders, setOrders]             = useState<ParsedOrder[]>([])
+  const [error, setError]               = useState('')
+  const [done, setDone]                 = useState(false)
+  const [dragging, setDragging]         = useState(false)
+  const [createInv, setCreateInv]       = useState(true)
+  const [createSalesRec, setCreateSalesRec] = useState(true)
+  const [expanded, setExpanded]         = useState<Set<string>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback((file: File) => {
@@ -254,6 +256,46 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       importInvoices(invs)
     }
 
+    // ── Sales Records (每個品項一筆) ──
+    if (createSalesRec) {
+      const recs: SalesRecord[] = []
+      orders.forEach(o => {
+        if (o.items.length > 0) {
+          o.items.forEach((it, idx) => {
+            recs.push({
+              id:           `SR-${o.orderId}-${idx}-${ts}`,
+              orderId:      o.orderId,
+              date:         o.date,
+              month:        toMonth(o.date),
+              customerName: o.customer,
+              productName:  it.name,
+              variant:      it.variant,
+              quantity:     it.quantity,
+              unitPrice:    it.unitPrice,
+              subtotal:     it.subtotal,
+              source:       '1shop',
+            })
+          })
+        } else {
+          // 無品項明細時，以訂單本身建一筆紀錄
+          recs.push({
+            id:           `SR-${o.orderId}-0-${ts}`,
+            orderId:      o.orderId,
+            date:         o.date,
+            month:        toMonth(o.date),
+            customerName: o.customer,
+            productName:  `1shop 訂單 #${o.orderId}`,
+            variant:      '',
+            quantity:     1,
+            unitPrice:    o.total,
+            subtotal:     o.total,
+            source:       '1shop',
+          })
+        }
+      })
+      importSalesRecords(recs)
+    }
+
     setDone(true)
   }
 
@@ -302,6 +344,7 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <p>已匯入 <strong>{orders.length}</strong> 筆訂單收入記錄</p>
                 {totalItems > 0 && <p>共 <strong>{totalItems}</strong> 個商品品項</p>}
                 {createInv && <p>已建立 <strong>{orders.length}</strong> 筆發票（含稅5%）</p>}
+                {createSalesRec && <p>已建立 <strong>{totalItems > 0 ? totalItems : orders.length}</strong> 筆銷售品項紀錄</p>}
               </div>
               <p className="text-xl font-bold text-emerald-600 mt-3">
                 NT$ {totalAmount.toLocaleString('zh-TW')}
@@ -456,8 +499,22 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     <span className="text-gray-300">—</span>
                                   )}
                                 </td>
-                                <td className="py-2 px-3 font-semibold text-emerald-600 text-right whitespace-nowrap">
-                                  NT$ {o.total.toLocaleString('zh-TW')}
+                                <td className="py-2 px-3 text-right whitespace-nowrap">
+                                  <span className="font-semibold text-emerald-600">
+                                    NT$ {o.total.toLocaleString('zh-TW')}
+                                  </span>
+                                  {(() => {
+                                    if (o.items.length === 0) return null
+                                    const itemSum = o.items.reduce((s, it) => s + it.subtotal, 0)
+                                    const diff = Math.abs(itemSum - o.total)
+                                    if (diff <= 1) return null
+                                    return (
+                                      <span className="block text-[10px] text-orange-500 mt-0.5"
+                                        title={`品項合計 NT$ ${itemSum.toLocaleString('zh-TW')}，與訂單金額差 NT$ ${Math.round(diff).toLocaleString('zh-TW')}`}>
+                                        ⚠ 品項合計 NT${itemSum.toLocaleString('zh-TW')}
+                                      </span>
+                                    )
+                                  })()}
                                 </td>
                                 <td className="py-2 px-3">
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
@@ -501,6 +558,18 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <p className="text-sm font-semibold text-blue-800">同步建立發票記錄</p>
                       <p className="text-xs text-blue-500 mt-0.5">
                         每筆訂單建立對應發票（含稅5%），品項明細自動帶入，並依訂單月份分類報稅月份
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Sales records toggle */}
+                  <label className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-lg cursor-pointer select-none">
+                    <input type="checkbox" checked={createSalesRec} onChange={e => setCreateSalesRec(e.target.checked)}
+                      className="w-4 h-4 accent-emerald-600 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800">建立銷售品項紀錄</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        每個品項建立一筆銷售紀錄（品名、規格、數量、單價），供庫存與銷售分析使用
                       </p>
                     </div>
                   </label>

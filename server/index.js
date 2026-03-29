@@ -136,6 +136,19 @@ db.exec(`
     orders     INTEGER NOT NULL DEFAULT 0,
     month      TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS sales_records (
+    id           TEXT PRIMARY KEY,
+    orderId      TEXT NOT NULL DEFAULT '',
+    date         TEXT NOT NULL,
+    month        TEXT NOT NULL,
+    customerName TEXT NOT NULL DEFAULT '',
+    productName  TEXT NOT NULL DEFAULT '',
+    variant      TEXT NOT NULL DEFAULT '',
+    quantity     REAL NOT NULL DEFAULT 1,
+    unitPrice    REAL NOT NULL DEFAULT 0,
+    subtotal     REAL NOT NULL DEFAULT 0,
+    source       TEXT NOT NULL DEFAULT '1shop'
+  );
 `)
 
 // ─── Ad Management tables (Phase 1 schema — matches types/index.ts) ─────────
@@ -618,6 +631,24 @@ app.post('/api/invoices/bulk', (req, res) => {
   try {
     insertAll(invoices)
     res.json({ inserted: invoices.length })
+  } catch (e) { res.status(400).json({ error: e.message }) }
+})
+
+// ─── Sales Records ─────────────────────────────────────────────────────────
+app.get('/api/sales-records', (_req, res) => {
+  res.json(db.prepare('SELECT * FROM sales_records ORDER BY date DESC').all())
+})
+
+app.post('/api/sales-records/bulk', (req, res) => {
+  const records = req.body
+  const stmt = db.prepare(
+    'INSERT OR IGNORE INTO sales_records(id,orderId,date,month,customerName,productName,variant,quantity,unitPrice,subtotal,source) ' +
+    'VALUES (@id,@orderId,@date,@month,@customerName,@productName,@variant,@quantity,@unitPrice,@subtotal,@source)'
+  )
+  const insertAll = db.transaction(rows => rows.forEach(r => stmt.run(r)))
+  try {
+    insertAll(records)
+    res.json({ inserted: records.length })
   } catch (e) { res.status(400).json({ error: e.message }) }
 })
 

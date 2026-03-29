@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react'
-import { Transaction, Invoice, CostItem, Campaign, MonthlyData, AdCopy } from '../types'
+import { Transaction, Invoice, CostItem, Campaign, MonthlyData, AdCopy, SalesRecord } from '../types'
 
 export interface AppState {
   transactions: Transaction[]
@@ -203,8 +203,9 @@ interface CtxType {
   saveTransaction:    (tx: Transaction)   => Promise<void>
   createTransaction:  (tx: Transaction)   => Promise<void>
   removeTransaction:  (id: string)        => Promise<void>
-  importTransactions: (txs: Transaction[]) => Promise<void>
-  importInvoices:     (invs: Invoice[])    => Promise<void>
+  importTransactions:  (txs: Transaction[])    => Promise<void>
+  importInvoices:      (invs: Invoice[])       => Promise<void>
+  importSalesRecords:  (recs: SalesRecord[])   => Promise<void>
 
   saveInvoice:   (inv: Invoice) => Promise<void>
   createInvoice: (inv: Invoice) => Promise<void>
@@ -267,6 +268,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const importInvoices = useCallback(async (invs: Invoice[]) => {
     dispatch({ type: 'IMPORT_INVOICES', payload: invs })
     await post('/api/invoices/bulk', invs)
+  }, [])
+
+  const importSalesRecords = useCallback(async (recs: SalesRecord[]) => {
+    await post('/api/sales-records/bulk', recs)
   }, [])
 
   // ── Invoices ──
@@ -348,7 +353,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       state, dispatch,
-      saveTransaction, createTransaction, removeTransaction, importTransactions, importInvoices,
+      saveTransaction, createTransaction, removeTransaction, importTransactions, importInvoices, importSalesRecords,
       saveInvoice, createInvoice, removeInvoice,
       saveCost, createCost, removeCost,
       saveCampaign, createCampaign, removeCampaign,
