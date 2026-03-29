@@ -205,19 +205,21 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     // ── Transactions (訂單收入) ──
     const txs: Transaction[] = orders.map(o => {
+      const paid = isPaidStatus(o.paymentStatus)
       const itemSummary = o.items.length > 0
         ? o.items.map(it => `${it.name}${it.variant ? `(${it.variant})` : ''}×${it.quantity}`).join('、')
         : null
+      const tag = paid ? '[1shop]' : '[1shop|待付款]'
       return {
         id:          `1SHOP-${o.orderId}-${ts}`,
         date:        o.date,
         description: itemSummary
-          ? `[1shop] #${o.orderId} ${o.customer} — ${itemSummary}`
-          : `[1shop] 訂單 #${o.orderId} — ${o.customer}`,
+          ? `${tag} #${o.orderId} ${o.customer} — ${itemSummary}`
+          : `${tag} 訂單 #${o.orderId} — ${o.customer}`,
         category:    '電商收入',
         amount:      o.total,
         type:        'income' as const,
-        status:      isPaidStatus(o.paymentStatus) ? 'completed' as const : 'pending' as const,
+        status:      paid ? 'completed' as const : 'pending' as const,
       }
     })
     importTransactions(txs)

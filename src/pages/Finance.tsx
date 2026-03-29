@@ -120,7 +120,11 @@ const Finance: React.FC = () => {
     setTimeout(() => setSaved(false), 1800)
   }, [])
 
-  const completedTx = transactions.filter(t => t.status !== 'cancelled')
+  // pending income = 尚未收到款項，不計入收入統計；pending expense = 已發生成本，仍計入
+  const completedTx = transactions.filter(t =>
+    t.status !== 'cancelled' &&
+    !(t.type === 'income' && t.status === 'pending')
+  )
   const totalIncome  = completedTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpense = completedTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const net = totalIncome - totalExpense

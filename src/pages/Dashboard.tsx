@@ -58,8 +58,12 @@ const Dashboard: React.FC = () => {
   }, [])
 
   // ── Compute real metrics ──
+  // pending income = 尚未收到款項，不計入月收入；pending expense = 已發生成本，仍計入
   const completedTx = useMemo(() =>
-    transactions.filter(t => t.status !== 'cancelled')
+    transactions.filter(t =>
+      t.status !== 'cancelled' &&
+      !(t.type === 'income' && t.status === 'pending')
+    )
   , [transactions])
 
   const latestMonth = useMemo(() => {
