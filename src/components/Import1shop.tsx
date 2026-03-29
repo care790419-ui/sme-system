@@ -406,7 +406,7 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                           <th className="py-2 px-3 text-left text-gray-500 font-semibold w-6"></th>
                           <th className="py-2 px-3 text-left text-gray-500 font-semibold">訂單編號</th>
                           <th className="py-2 px-3 text-left text-gray-500 font-semibold">日期</th>
-                          <th className="py-2 px-3 text-left text-gray-500 font-semibold">客戶</th>
+                          <th className="py-2 px-3 text-left text-gray-500 font-semibold">客戶姓名</th>
                           <th className="py-2 px-3 text-left text-gray-500 font-semibold">品項</th>
                           <th className="py-2 px-3 text-right text-gray-500 font-semibold">金額</th>
                           <th className="py-2 px-3 text-left text-gray-500 font-semibold">狀態</th>
@@ -437,11 +437,14 @@ const Import1shop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                   }
                                 </td>
                                 <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{o.date}</td>
-                                <td className="py-2 px-3 max-w-[100px] truncate" title={o.customer}>
+                                <td className="py-2 px-3 max-w-[140px]">
                                   {o.customer === '未知客戶'
                                     ? <span className="text-red-400 italic">{o.customer}</span>
-                                    : <span className="text-gray-700 font-medium">{o.customer}</span>
+                                    : <span className="text-gray-800 font-semibold block truncate" title={o.customer}>{o.customer}</span>
                                   }
+                                  {o.phone && (
+                                    <span className="text-gray-400 text-[10px] block truncate" title={o.phone}>{o.phone}</span>
+                                  )}
                                 </td>
                                 <td className="py-2 px-3">
                                   {o.items.length > 0 ? (
