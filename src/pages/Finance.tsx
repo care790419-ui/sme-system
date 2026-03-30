@@ -125,9 +125,31 @@ const Finance: React.FC = () => {
     t.status !== 'cancelled' &&
     !(t.type === 'income' && t.status === 'pending')
   )
+  // 全期加總（供 P&L、現金流量頁使用）
   const totalIncome  = completedTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpense = completedTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const net = totalIncome - totalExpense
+
+  // ── 本月 KPI（頂部 4 張卡片）────────────────────────────────────────────────
+  const curMonth = thisMonthCST()
+  const curMonthIncome  = completedTx.filter(t => t.type === 'income'  && t.date.startsWith(curMonth)).reduce((s, t) => s + t.amount, 0)
+  const curMonthExpense = completedTx.filter(t => t.type === 'expense' && t.date.startsWith(curMonth)).reduce((s, t) => s + t.amount, 0)
+  const curMonthNet     = curMonthIncome - curMonthExpense
+
+  // 上月收入（計算環比）
+  const prevMth = (() => {
+    const [y, m] = curMonth.split('-').map(Number)
+    const d = new Date(y, m - 2)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })()
+  const prevMonthIncome = completedTx.filter(t => t.type === 'income' && t.date.startsWith(prevMth)).reduce((s, t) => s + t.amount, 0)
+  const incomeChgLabel = prevMonthIncome > 0
+    ? `較上月 ${curMonthIncome >= prevMonthIncome ? '+' : ''}${(((curMonthIncome - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1)}%`
+    : (curMonthIncome > 0 ? '本月新增' : '本月暫無收入')
+
+  // 應收帳款 = 全部未付發票（不限月份）
+  const totalReceivable  = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + i.amount, 0)
+  const allOverdueCount  = invoices.filter(i => i.status === 'overdue').length
 
   // Invoice filtered by selected tax month
   const taxMonthInvoices = invoices.filter(i => (i.taxMonth || toMonth(i.date)) === invTaxMonth)
@@ -390,10 +412,10 @@ const Finance: React.FC = () => {
 
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="本月總收入" value={formatNT(totalIncome)} change="較上月 +8.3%" changeType="positive" icon={TrendingUp} iconBg="bg-blue-50" iconColor="text-blue-600" />
-        <StatCard title="本月總支出" value={formatNT(totalExpense)} change="較上月 +3.1%" changeType="neutral" icon={TrendingDown} iconBg="bg-orange-50" iconColor="text-orange-500" />
-        <StatCard title="淨現金流" value={formatNT(net)} change={`利潤率 ${totalIncome > 0 ? ((net / totalIncome) * 100).toFixed(1) : 0}%`} changeType={net > 0 ? 'positive' : 'negative'} icon={DollarSign} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-        <StatCard title="應收帳款" value={formatNT(receivable)} change={`${overdueInv.length} 筆逾期`} changeType={overdueInv.length > 0 ? 'negative' : 'positive'} icon={FileText} iconBg="bg-red-50" iconColor="text-red-500" />
+        <StatCard title="本月確認收入" value={formatNT(curMonthIncome)} change={incomeChgLabel} changeType={curMonthIncome >= prevMonthIncome ? 'positive' : 'negative'} icon={TrendingUp} iconBg="bg-blue-50" iconColor="text-blue-600" />
+        <StatCard title="本月支出" value={formatNT(curMonthExpense)} change={curMonth} changeType="neutral" icon={TrendingDown} iconBg="bg-orange-50" iconColor="text-orange-500" />
+        <StatCard title="本月淨現金流" value={formatNT(curMonthNet)} change={`利潤率 ${curMonthIncome > 0 ? ((curMonthNet / curMonthIncome) * 100).toFixed(1) : 0}%`} changeType={curMonthNet >= 0 ? 'positive' : 'negative'} icon={DollarSign} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+        <StatCard title="應收帳款（全部）" value={formatNT(totalReceivable)} change={`${allOverdueCount} 筆逾期`} changeType={allOverdueCount > 0 ? 'negative' : 'positive'} icon={FileText} iconBg="bg-red-50" iconColor="text-red-500" />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
