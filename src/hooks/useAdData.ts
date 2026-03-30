@@ -10,7 +10,7 @@
  *      /api/ad-creatives, /api/ad-performance, /api/meta-integration-settings
  *   3. Call loadAll() on mount to fetch initial data
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type {
   AdCampaign, AdCopyVersion, AdCreative, AdPerformance, MetaIntegrationSettings,
 } from '../types'
@@ -19,7 +19,7 @@ import {
 } from '../data/adMockData'
 
 // ── Toggle this to switch between mock and real API ──────────────────────────
-const USE_MOCK = true
+const USE_MOCK = false
 
 // ── API helpers (used when USE_MOCK = false) ──────────────────────────────────
 async function apiGet<T>(path: string): Promise<T> {
@@ -59,22 +59,27 @@ export function useAdData() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
 
-  // ── Load from API (used when USE_MOCK = false) ────────────────────────────
+  // ── Load from API ─────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     if (USE_MOCK) return
     setLoading(true)
     try {
-      const [cams, cvs] = await Promise.all([
+      const [cams, cvs, crs] = await Promise.all([
         apiGet<AdCampaign[]>('/api/ad-campaigns'),
         apiGet<AdCopyVersion[]>('/api/ad-copy-versions'),
+        apiGet<AdCreative[]>('/api/ad-creatives'),
       ])
       setCampaigns(cams)
       setCopyVersions(cvs)
+      setCreatives(crs)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '載入失敗')
     }
     setLoading(false)
   }, [])
+
+  // ── Auto-load on mount ────────────────────────────────────────────────────
+  useEffect(() => { loadAll() }, [loadAll])
 
   // ── Campaign CRUD ─────────────────────────────────────────────────────────
   const createCampaign = useCallback(async (
