@@ -321,7 +321,7 @@ db.exec(`
   );
 `)
 db.prepare("INSERT OR IGNORE INTO settings VALUES('company_name','我的公司')").run()
-db.prepare("INSERT OR IGNORE INTO settings VALUES('demo_mode','true')").run()
+db.prepare("INSERT OR IGNORE INTO settings VALUES('demo_mode','false')").run()
 db.prepare("INSERT OR IGNORE INTO settings VALUES('password','admin')").run()
 
 // ─── Migrations ────────────────────────────────────────────────────────────
@@ -878,18 +878,6 @@ app.get('/api/settings', (_req, res) => {
 })
 app.put('/api/settings/:key', (req, res) => {
   db.prepare('INSERT OR REPLACE INTO settings VALUES (?,?)').run(req.params.key, req.body.value)
-  res.json({ ok: true })
-})
-app.post('/api/settings/reset-demo', (_req, res) => {
-  const DATA_TABLES = ['transactions','invoices','invoice_items','cost_items','campaigns',
-    'cost_records','product_costs','sales_channels','cost_categories','vendors']
-  db.transaction(() => {
-    DATA_TABLES.forEach(t => db.prepare(`DELETE FROM ${t}`).run())
-    db.prepare("DELETE FROM meta WHERE key='seeded'").run()
-    db.prepare("UPDATE settings SET value='true' WHERE key='demo_mode'").run()
-  })()
-  seedDatabase()
-  db.prepare("INSERT OR REPLACE INTO meta(key,value) VALUES('seeded','1')").run()
   res.json({ ok: true })
 })
 app.post('/api/settings/clear-all', (_req, res) => {
